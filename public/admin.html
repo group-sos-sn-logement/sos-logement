@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <link rel="icon" href="S.O.S LOGEMENT.png">
+    <style>
+      body { font-family:'Times New Roman', Times, serif; background:#f5f5f5ae; padding:20px }
+      .card { background:white; padding:15px; margin-bottom:15px; border-radius:8px }
+      button { padding:6px 10px; border-radius: 10px; margin-right:5px; cursor:pointer }
+      .approve { background:green; color:white }
+      .delete { background:red; color:white }
+      .mail { background:rgb(0, 0, 255); color:white }
+
+    </style>
+  </head>
+  <body>
+
+    <h1>Admin Dashboard</h1>
+    
+    <h2>📊 Statistique</h2>
+    <div id="stats" class="card"></div>
+
+    <h2>🏠 Biens approuvés</h2>
+    <div id="approvedProperties"></div>     
+
+    <h2>📦 Biens immobiliers en attente</h2>
+    <div id="properties"></div>
+
+    <h2>🙈 Biens masqués</h2>
+    <div id="hiddenProperties"></div>
+
+    <h2>👤 Demandes de propriétaires</h2>
+    <div id="owners"></div>
+
+    <h2>📧 Envoyer un mail à l' Utilisateurs</h2>
+    <button onclick="sendMail('student')">Envoyer aux étudiants</button>
+     
+    <br> <br> 
+
+    <button onclick="sendMail('seeker')">Envoyer aux chercheurs</button>
+     
+    <br> <br> 
+    
+    <button onclick="sendMail('owner')">Envoyer aux propriétaires</button>
+     
+    <br> <br> 
+    
+    <button onclick="sendMail('all')">Envoyer à tous</button>
+     
+    <br> <br> 
+    
+    <textarea id="message" placeholder="Votre message..." rows="4" cols="50"></textarea><br>
+    <br> 
+    <button class="mail" onclick="sendMail()">Envoyer</button>
+
+    <script>
+    const token = localStorage.getItem("token");
+
+    function loadProperties() {
+      fetch("http://localhost:5000/admin/properties", {
+      headers: { "Authorization": "Bearer " + token }
+    })
+    .then(res => res.json())
+    .then(data => {
+    const container = document.getElementById("properties");
+    container.innerHTML = "";
+
+    data.forEach(p => {
+      container.innerHTML += `
+      <div class="card">
+      <h3>${p.title}</h3>
+      <p>${p.city} - ${p.price} FCFA</p>
+
+      <button class="approve" onclick="approveProperty(${p.id})">Approve</button>
+      <button onclick="hideProperty(${p.id})">Hide</button>
+      <button class="delete" onclick="deleteProperty(${p.id})">Delete</button>
+
+      </div>
+      `;
+    });
+    });
+    }
+
+    function loadHiddenProperties(){
+      fetch("http://localhost:5000/admin/properties-hidden",{
+      headers:{ "Authorization": "Bearer " + token }
+      })
+      .then(res=>res.json())
+      .then(data=>{
+
+      const container = document.getElementById("hiddenProperties");
+      container.innerHTML = "";
+
+      data.forEach(p=>{
+
+      container.innerHTML += `
+      <div class="card">
+      <h3>${p.title}</h3>
+      <p>${p.city} - ${p.price} FCFA</p>
+
+      <button onclick="restoreProperty(${p.id})">Restore</button>
+      <button class="delete" onclick="deleteProperty(${p.id})">Delete</button>
+
+      </div>
+      `;
+
+      });
+
+    });
+    }
+
+    function hideProperty(id){
+      fetch(`http://localhost:5000/admin/properties/${id}/hide`,{
+      method:"PUT",
+      headers:{ "Authorization": "Bearer " + token }
+      }).then(()=>loadProperties());
+    }
+
+    function deleteProperty(id){
+      fetch(`http://localhost:5000/admin/properties/${id}`,{
+      method:"DELETE",
+      headers:{ "Authorization": "Bearer " + token }
+      }).then(()=>{
+      loadProperties();
+      loadApprovedProperties();
+      loadHiddenProperties();
+      });
+    }
+            
+
+    function loadOwners() {
+      fetch("http://localhost:5000/admin/owner-requests", {
+      headers: { "Authorization": "Bearer " + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+
+      const container = document.getElementById("owners");
+      container.innerHTML = "";
+
+      data.forEach(u => {
+
+      let status = "Pending";
+      if(u.approved) status = "Approved";
+      if(u.banned) status = "Banned";
+
+      container.innerHTML += `
+      <div class="card">
+
+      <p>
+      ${u.email} 
+      <br>
+      <b>Status: ${status}</b>
+      </p>
+
+      ${!u.approved && !u.banned ? 
+      `<button class="approve" onclick="approveOwner(${u.id})">Approve</button>` 
+      : ""}
+
+      ${!u.banned ? 
+      `<button onclick="banUser(${u.id})">Ban</button>` 
+      : 
+      `<button onclick="unbanUser(${u.id})">Unban</button>`
+      }
+
+      <button class="delete" onclick="deleteUser(${u.id})">Delete</button>
+
+      </div>
+      `;
+
+      });
+
+      });
+    }
+
+    function restoreProperty(id){
+      fetch(`http://localhost:5000/admin/properties/${id}/restore`,{
+      method:"PUT",
+      headers:{ "Authorization": "Bearer " + token }
+      }).then(()=>{
+      loadHiddenProperties();
+      loadApprovedProperties();
+      });
+      }
+
+    function loadApprovedProperties() {
+      fetch("http://localhost:5000/admin/properties-approved",{
+      headers:{ "Authorization": "Bearer " + token }
+      })
+      .then(res=>res.json())
+      .then(data=>{
+
+      const container = document.getElementById("approvedProperties");
+      container.innerHTML = "";
+
+      data.forEach(p=>{
+
+      container.innerHTML += `
+      <div class="card">
+      <h3>${p.title}</h3>
+      <p>${p.city} - ${p.price} FCFA</p>
+
+      <button onclick="hideProperty(${p.id})">Hide</button>
+      <button class="delete" onclick="deleteProperty(${p.id})">Delete</button>
+
+      </div>
+      `;
+
+      });
+
+      });
+    }
+
+    function approveProperty(id){
+      fetch(`http://localhost:5000/admin/properties/${id}/approve`,{
+      method:"PUT",
+      headers:{ "Authorization": "Bearer " + token }
+      }).then(()=>{
+      loadProperties();
+      loadApprovedProperties();
+      });
+    }
+
+    function approveOwner(id){
+    fetch(`http://localhost:5000/admin/users/${id}/approve-owner`,{
+    method:"PUT",
+    headers:{ "Authorization": "Bearer " + token }
+    }).then(()=>loadOwners());
+    }
+
+    function deleteUser(id){
+    fetch(`http://localhost:5000/admin/users/${id}`,{
+    method:"DELETE",
+    headers:{ "Authorization": "Bearer " + token }
+    }).then(()=>loadOwners());
+    }
+
+    function banUser(id){
+      fetch(`http://localhost:5000/admin/users/${id}/ban`,{
+      method:"PUT",
+      headers:{ "Authorization": "Bearer " + token }
+      }).then(()=>loadOwners());
+      }
+
+      function unbanUser(id){
+      fetch(`http://localhost:5000/admin/users/${id}/unban`,{
+      method:"PUT",
+      headers:{ "Authorization": "Bearer " + token }
+      }).then(()=>loadOwners());
+    }
+
+    
+    function sendMail(role){
+
+    const message = prompt("Écrire le message");
+
+    fetch("http://localhost:5000/admin/send-mail",{
+    method:"POST",
+    headers:{
+    "Content-Type":"application/json",
+    "Authorization":"Bearer "+token
+    },
+    body: JSON.stringify({
+    role:role,
+    message:message
+    })
+    });
+
+    alert("Emails envoyés");
+
+    }
+
+    function logout(){
+      fetch("http://localhost:5000/logout",{
+        method:"POST",
+        headers:{ "Authorization": "Bearer " + token }
+      }).then(()=>{
+        localStorage.removeItem("token");
+        window.location.href="login.html";
+      });
+    }
+
+    function loadStats(){
+
+      fetch("http://localhost:5000/admin/stats",{
+      headers:{ "Authorization": "Bearer " + token }
+      })
+
+      .then(res=>res.json())
+
+      .then(data=>{
+
+      document.getElementById("stats").innerHTML = `
+      <p>Nombre total d’utilisateurs: ${data.totalUsers}</p>
+      <p>Propriétaires: ${data.owners}</p>
+      <p>Utilisateurs Interdits: ${data.bannedUsers}</p>
+      <p>Biens en attente: ${data.pendingProperties}</p>
+      <p>Biens approuvés: ${data.approvedProperties}</p>
+      <p>Total biens: ${data.totalProperties}</p>
+      `;
+
+      });
+
+    }
+
+    loadStats();
+    loadProperties();
+    loadOwners();
+    loadApprovedProperties();
+    loadHiddenProperties();
+    </script>
+
+  </body>
+</html>
