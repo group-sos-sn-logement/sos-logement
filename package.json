@@ -25,8 +25,7 @@
     "multer": "^2.1.1",
     "nodemailer": "^8.0.1",
     "pg": "^8.18.0",
-    "streamifier": "^0.1.1",
-    "xss-clean": "^0.1.4"
+    "streamifier": "^0.1.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

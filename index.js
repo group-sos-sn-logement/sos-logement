@@ -3,8 +3,7 @@ const app = express();
 const path = require("path");
 
 const { body, validationResult } = require("express-validator");
-const xss = require("xss-clean");
-app.use(xss());
+
 
 require("dotenv").config();
 
@@ -81,6 +80,15 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   }
 });
+
+let visitors = 0;
+
+app.use((req, res, next) => {
+  if (!req.headers.authorization) {
+    visitors++;
+  }
+  next();
+});
 console.log("DIR NAME:", __dirname);
 
 
@@ -89,7 +97,13 @@ app.use((req, res, next) => {
   console.log("===== NEW REQUEST =====");
   console.log("Method:", req.method);
   console.log("URL:", req.url);
-  console.log("Body:", req.body);
+  const safeBody = { ...req.body };
+
+    if (safeBody.password) {
+      safeBody.password = "******"; // إخفاء الباسورد
+    }
+
+  console.log("Body:", safeBody);
   console.log("=======================");
   next(); // مهم! عشان يستمر الباقي من الـ routes
 });
@@ -162,7 +176,10 @@ app.get("/properties", async (req, res) => {
     const result = await pool.query(`
       SELECT p.*, 
       ARRAY(
-        SELECT image_url
+        SELECT json_build_object(
+          'id', id,
+          'url', image_url
+        )
         FROM property_images
         WHERE property_id = p.id
       ) AS images
@@ -355,39 +372,38 @@ const streamUpload = (fileBuffer) => {
   });
 };
 
-app.post("/properties/:id/images", auth, upload.array("media", 6), async (req, res) => {
+app.post("/properties/:id/images", auth, upload.array("media", 10), async (req, res) => {
   try {
     const propertyId = req.params.id;
 
-    let firstImageUrl = null;
+    // 🔥 1. جلب الصور القديمة
+    const oldImages = await pool.query(
+      "SELECT public_id FROM property_images WHERE property_id=$1",
+      [propertyId]
+    );
 
-      // 👇 هنا بالضبط
-      console.log("FILES:", req.files);
+    // 🔥 2. حذفها من Cloudinary
+    for (const img of oldImages.rows) {
+      await cloudinary.uploader.destroy(img.public_id);
+    }
 
+    // 🔥 3. حذفها من DB
+    await pool.query(
+      "DELETE FROM property_images WHERE property_id=$1",
+      [propertyId]
+    );
+
+    // 🔥 4. رفع الصور الجديدة
     for (const file of req.files) {
-
       const result = await streamUpload(file.buffer);
-
-      // 👇 ضع هذا هنا بالضبط
-      console.log("CLOUDINARY RESULT:", result);
-
-
-      if (!firstImageUrl) {
-        firstImageUrl = result.secure_url;
-      }
 
       await pool.query(
         "INSERT INTO property_images (property_id, image_url, public_id, type) VALUES ($1,$2,$3,$4)",
-        [
-          propertyId,
-          result.secure_url,
-          result.public_id,
-          result.resource_type
-        ]
+        [propertyId, result.secure_url, result.public_id, result.resource_type]
       );
     }
 
-    res.json({ message: "Upload success" });
+    res.json({ message: "Images replaced ✅" });
 
   } catch (err) {
     console.error(err);
@@ -808,6 +824,48 @@ app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
 });
 
 
+app.delete("/admin/images/:id", auth, adminOnly, async (req,res)=>{
+  try {
+
+    // 1️⃣ نجيب الصورة
+    const result = await pool.query(`
+      SELECT property_images.public_id, properties.owner_id
+      FROM property_images
+      JOIN properties ON property_images.property_id = properties.id
+      WHERE property_images.id = $1
+    `, [req.params.id]);
+    if(
+      req.user.role !== "admin" &&
+      result.rows[0].owner_id !== req.user.id
+    ){
+      return res.status(403).json({message:"Unauthorized"});
+    }
+
+    if(result.rows.length === 0){
+      return res.status(404).json({message:"Image not found"});
+    }
+
+    const public_id = result.rows[0].public_id;
+
+    // 2️⃣ نحذف من Cloudinary
+    await cloudinary.uploader.destroy(public_id);
+
+    // 3️⃣ نحذف من DB
+    await pool.query(
+      "DELETE FROM property_images WHERE id=$1",
+      [req.params.id]
+    );
+
+    res.json({message:"Image deleted from DB & Cloudinary ✅"});
+
+  } catch(err){
+    console.error(err);
+    res.status(500).json({message:"Erreur serveur"});
+  }
+});
+
+
+
 app.delete("/admin/users/:id", auth, adminOnly, async (req,res)=>{
   try{
 
@@ -868,9 +926,9 @@ app.get("/admin/properties-hidden", auth, adminOnly, async (req,res)=>{
 
 app.put("/admin/properties/:id/restore", auth, adminOnly, async (req,res)=>{
   await pool.query(
-  "UPDATE properties SET status='approved' WHERE id=$1",
-  [req.params.id]
-  );
+  "UPDATE properties SET price=$1, city=$2, status='approved' WHERE id=$3",
+  [price, city, req.params.id]
+);
 
   res.json({message:"Restored"});
 });
@@ -879,14 +937,39 @@ app.put("/admin/properties/:id/restore", auth, adminOnly, async (req,res)=>{
 app.delete("/admin/properties/:id", auth, adminOnly, async (req,res)=>{
   try{
 
-    await pool.query(
-    "DELETE FROM properties WHERE id=$1",
-    [req.params.id]
+    const images = await pool.query(
+      "SELECT public_id FROM property_images WHERE property_id=$1",
+      [req.params.id]
     );
+
+    for(const img of images.rows){
+      await cloudinary.uploader.destroy(img.public_id);
+    }
+
+    await pool.query("DELETE FROM properties WHERE id=$1",[req.params.id]);
 
     res.json({message:"Property deleted"});
 
     }catch(err){
+    console.error(err);
+    res.status(500).json({message:"Erreur serveur"});
+  }
+});
+
+
+app.put("/admin/properties/:id", auth, adminOnly, async (req,res)=>{
+  try{
+
+    const { price, city } = req.body;
+
+    await pool.query(
+      "UPDATE properties SET price=$1, city=$2 WHERE id=$3",
+      [price, city, req.params.id]
+    );
+
+    res.json({message:"Updated successfully"});
+
+  }catch(err){
     console.error(err);
     res.status(500).json({message:"Erreur serveur"});
   }
@@ -930,6 +1013,28 @@ res.status(500).json({message:"Erreur serveur"});
 });
 
 
+
+app.post("/admin/send-one-mail", auth, adminOnly, async (req,res)=>{
+  try{
+
+    const { email, message } = req.body;
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Message de l'administration",
+      html: `<p>${message}</p>`
+    });
+
+    res.json({message:"Email envoyé"});
+
+  }catch(err){
+    console.error(err);
+    res.status(500).json({message:"Erreur serveur"});
+  }
+});
+
+
 app.put("/admin/users/:id/ban", auth, adminOnly, async (req,res)=>{
 await pool.query("UPDATE users SET banned=true WHERE id=$1",[req.params.id]);
 res.json({message:"Banned"});
@@ -938,6 +1043,36 @@ res.json({message:"Banned"});
 app.put("/admin/users/:id/unban", auth, adminOnly, async (req,res)=>{
 await pool.query("UPDATE users SET banned=false WHERE id=$1",[req.params.id]);
 res.json({message:"Unbanned"});
+});
+
+
+app.get("/admin/students", auth, adminOnly, async (req, res) => {
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = 5; // عدد المستخدمين في الصفحة
+  const offset = (page - 1) * limit;
+
+  const result = await pool.query(
+    "SELECT id, email FROM users WHERE role='student' ORDER BY id DESC LIMIT $1 OFFSET $2",
+    [limit, offset]
+  );
+
+  res.json(result.rows);
+});
+
+
+app.get("/admin/seekers", auth, adminOnly, async (req, res) => {
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = 5;
+  const offset = (page - 1) * limit;
+
+  const result = await pool.query(
+    "SELECT id, email FROM users WHERE role='seeker' ORDER BY id DESC LIMIT $1 OFFSET $2",
+    [limit, offset]
+  );
+
+  res.json(result.rows);
 });
 
 
@@ -969,13 +1104,24 @@ const totalProperties = await pool.query(
 "SELECT COUNT(*) FROM properties"
 );
 
+const students = await pool.query(
+  "SELECT COUNT(*) FROM users WHERE role='student'"
+);
+
+const seekers = await pool.query(
+  "SELECT COUNT(*) FROM users WHERE role='seeker'"
+);
+
 res.json({
 totalUsers: totalUsers.rows[0].count,
 owners: owners.rows[0].count,
 bannedUsers: bannedUsers.rows[0].count,
 pendingProperties: pendingProperties.rows[0].count,
 approvedProperties: approvedProperties.rows[0].count,
-totalProperties: totalProperties.rows[0].count
+totalProperties: totalProperties.rows[0].count,
+students: students.rows[0].count,
+seekers: seekers.rows[0].count,
+visitors: visitors
 });
 
 }catch(err){
@@ -984,19 +1130,20 @@ res.status(500).json({message:"Erreur serveur"});
 }
 });
 
-app.get("/admin/search", auth, adminOnly, async (req,res)=>{
-const q = req.query.q;
-const category = req.query.category;
+app.get("/admin/search", auth, adminOnly, async (req, res) => {
+  const q = req.query.q;
 
-if(!q) return res.json([]);
+  if (!q) return res.json([]);
 
-const result = await pool.query(
-"SELECT id,email,role FROM users WHERE email ILIKE $1 AND role = $2",
-[`%${q}%`, category]
-);
+  const result = await pool.query(
+    `SELECT id, name, email, role, banned 
+     FROM users
+     WHERE name ILIKE $1 OR email ILIKE $1
+     ORDER BY id DESC`,
+    [`%${q}%`]
+  );
 
-
-res.json(result.rows);
+  res.json(result.rows);
 });
 
 const PORT = process.env.PORT || 5000;

@@ -4,57 +4,199 @@
     <meta charset="UTF-8">
     <title>Admin Dashboard</title>
     <link rel="icon" href="S.O.S LOGEMENT.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-      body { font-family:'Times New Roman', Times, serif; background:#f5f5f5ae; padding:20px }
-      .card { background:white; padding:15px; margin-bottom:15px; border-radius:8px }
-      button { padding:6px 10px; border-radius: 10px; margin-right:5px; cursor:pointer }
-      .approve { background:green; color:white }
-      .delete { background:red; color:white }
-      .mail { background:rgb(0, 0, 255); color:white }
+      body {
+        margin: 0;
+        font-family: 'Times New Roman', Times, serif;
+      }
+      .hidden {
+        display: none;
+      }
 
+
+      /* Layout */
+      .layout {
+        height: 100vh;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        width: 220px;
+        background: #111827;
+        color: white;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+
+        position: fixed;   /* 👈 يخليه ثابت */
+        top: 0;
+        left: 0;
+        height: 100vh;
+
+        overflow-y: auto;  /* 👈 يخلي الأزرار فقط scroll */
+      }
+
+      .sidebar h2 {
+        margin-bottom: 20px;
+      }
+
+      .sidebar button {
+        background: none;
+        border: none;
+        color: white;
+        padding: 10px;
+        text-align: left;
+        cursor: pointer;
+        border-radius: 8px;
+        margin-bottom: 5px;
+      }
+
+      .sidebar button:hover {
+        background: #1f2937;
+      }
+
+      .logout {
+        background: red !important;
+      }
+
+      /* Content */
+      .content {
+        flex: 1;
+        background: #f5f5f5;
+        padding: 20px;
+        overflow-y: auto;
+        position: relative;
+        margin-left: 240px; /* 👈 هذا هو الحل */
+
+      }
+
+      /* Cards */
+      .card {
+        background: white;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+      }
+
+      /* Buttons */
+      .approve {
+        background: green;
+        color: white;
+      }
+
+      .delete {
+        background: red;
+        color: white;
+      }
+
+      
+      .search {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 300px;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+      }
     </style>
   </head>
   <body>
 
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h2>Admin</h2>
+
+      <button onclick="showStats()">📊 Statistiques</button>
+      <button onclick="showApproved()">🏠 Approuvés</button>
+      <button onclick="showPending()">📦 En attente</button>
+      <button onclick="showHidden()">🙈 Masqués</button>
+      <button onclick="showOwners()">👤 Propriétaires</button>
+      <button onclick="showStudents()">🎓 Étudiants</button>
+      <button onclick="showSeekers()">🔎 Chercheurs</button>
+
+      <hr>
+
+      <button onclick="sendMail('student')">📧 Étudiants</button>
+      <button onclick="sendMail('seeker')">📧 Chercheurs</button>
+      <button onclick="sendMail('owner')">📧 Propriétaires</button>
+      <button onclick="sendMail('all')">📧 Tous</button>
+
+      <hr>
+
+      <button onclick="logout()" class="logout">🚪 Logout</button>
+    </div>
+
+   <div class="content">
+ 
+    <input 
+      class="search"
+      type="text" 
+      id="searchInput" 
+      placeholder="🔍 Rechercher par nom ou email..."
+      onkeyup="searchUsers()"
+    >
+
+    <div id="searchResults"></div>
+
+
+    <!-- Main Content -->
     <h1>Admin Dashboard</h1>
-    
-    <h2>📊 Statistique</h2>
-    <div id="stats" class="card"></div>
 
+  <div id="stats" class="card section hidden"></div><br>
+
+  <canvas id="statsChart" width="400" height="200"></canvas>
+
+  <div id="approvedSection" class="section hidden">
     <h2>🏠 Biens approuvés</h2>
-    <div id="approvedProperties"></div>     
+    <div id="approvedProperties"></div>
+  </div>
 
-    <h2>📦 Biens immobiliers en attente</h2>
+  <div id="pendingSection" class="section hidden">
+    <h2>📦 Biens en attente</h2>
     <div id="properties"></div>
+  </div>
 
+  <div id="hiddenSection" class="section hidden">
     <h2>🙈 Biens masqués</h2>
     <div id="hiddenProperties"></div>
+  </div>
 
-    <h2>👤 Demandes de propriétaires</h2>
+  <div id="ownersSection" class="section hidden">
+    <h2>👤 Demandes propriétaires</h2>
     <div id="owners"></div>
+  </div>
 
-    <h2>📧 Envoyer un mail à l' Utilisateurs</h2>
-    <button onclick="sendMail('student')">Envoyer aux étudiants</button>
-     
-    <br> <br> 
+  <div id="studentsSection" class="section hidden">
+  <h2>🎓 Étudiants</h2>
+  <div id="students"></div>
+  </div>
 
-    <button onclick="sendMail('seeker')">Envoyer aux chercheurs</button>
-     
-    <br> <br> 
-    
-    <button onclick="sendMail('owner')">Envoyer aux propriétaires</button>
-     
-    <br> <br> 
-    
-    <button onclick="sendMail('all')">Envoyer à tous</button>
-     
-    <br> <br> 
-    
-    <textarea id="message" placeholder="Votre message..." rows="4" cols="50"></textarea><br>
-    <br> 
-    <button class="mail" onclick="sendMail()">Envoyer</button>
+  <div id="seekersSection" class="section hidden">
+    <h2>🔎 Chercheurs</h2>
+    <div id="seekers"></div>
+  </div>
 
-    <script>
+
+  <div id="editModal" class="hidden card">
+    <h3>Edit Property</h3>
+
+    <input id="editPrice" placeholder="Price"><br><br>
+    <input id="editCity" placeholder="City"><br><br>
+
+    <input type="file" id="editImages" multiple><br><br>
+
+    <button onclick="saveEdit()">💾 Save</button>
+    <button onclick="closeEdit()">❌ Cancel</button>
+  </div>
+
+</div>
+</div>  
+  
+  <script>
     const token = localStorage.getItem("token");
 
     function loadProperties() {
@@ -69,8 +211,24 @@
     data.forEach(p => {
       container.innerHTML += `
       <div class="card">
-      <h3>${p.title}</h3>
-      <p>${p.city} - ${p.price} FCFA</p>
+      ${p.images ? p.images.map(img => `
+        <div>
+          <img src="${img.url}" width="100">
+
+          <button onclick="setCover('${img.url}', ${p.id})">
+            ⭐ Set Cover
+          </button>
+
+          <button onclick="deleteImage(${img.id})">🗑️ Delete</button>
+        </div>
+      `).join("") : ""}
+      <p><b>${p.city}</b> - ${p.price} FCFA</p>
+
+      <hr>
+
+      <p>👤 Nom: ${p.User?.name || "N/A"}</p>
+      <p>🆔 Référence: ${p.User?.id || "N/A"}</p>
+      <p>📞 Téléphone: ${p.User?.phone || "N/A"}</p>
 
       <button class="approve" onclick="approveProperty(${p.id})">Approve</button>
       <button onclick="hideProperty(${p.id})">Hide</button>
@@ -109,6 +267,22 @@
 
     });
     }
+
+
+    function setCover(imageUrl, propertyId){
+      fetch(`http://localhost:5000/properties/${propertyId}/cover`,{
+        method:"PUT",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":"Bearer " + token
+        },
+        body: JSON.stringify({
+          image_url: imageUrl
+        })
+      })
+      .then(()=> alert("Cover updated ✅"));
+    }
+
 
     function hideProperty(id){
       fetch(`http://localhost:5000/admin/properties/${id}/hide`,{
@@ -165,6 +339,9 @@
       }
 
       <button class="delete" onclick="deleteUser(${u.id})">Delete</button>
+      
+      <button onclick="sendSingleMail('${u.email}')">📧 Send</button>
+
 
       </div>
       `;
@@ -182,7 +359,7 @@
       loadHiddenProperties();
       loadApprovedProperties();
       });
-      }
+    }
 
     function loadApprovedProperties() {
       fetch("http://localhost:5000/admin/properties-approved",{
@@ -197,14 +374,20 @@
       data.forEach(p=>{
 
       container.innerHTML += `
-      <div class="card">
-      <h3>${p.title}</h3>
-      <p>${p.city} - ${p.price} FCFA</p>
+        <div class="card">
+          <h3>${p.title}</h3>
+          <p><b>${p.city}</b> - ${p.price} FCFA</p>
 
-      <button onclick="hideProperty(${p.id})">Hide</button>
-      <button class="delete" onclick="deleteProperty(${p.id})">Delete</button>
+          <hr>
 
-      </div>
+          <p>👤 Nom: ${p.User?.name || "N/A"}</p>
+          <p>🆔 Référence: ${p.User?.id || "N/A"}</p>
+          <p>📞 Téléphone: ${p.User?.phone || "N/A"}</p>
+
+          <button onclick="editProperty(${p.id})">✏️ Edit</button>
+          <button onclick="hideProperty(${p.id})">Hide</button>
+          <button class="delete" onclick="deleteProperty(${p.id})">Delete</button>
+        </div>
       `;
 
       });
@@ -281,6 +464,178 @@
       });
     }
 
+    let currentStudentPage = 1;
+
+    function loadStudents(page = 1){
+      currentStudentPage = page;
+
+      fetch(`http://localhost:5000/admin/students?page=${page}`, {
+        headers: { "Authorization": "Bearer " + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+
+        const container = document.getElementById("students");
+        container.innerHTML = "";
+
+        data.forEach(u => {
+          container.innerHTML += `
+            <div class="card">
+              <p>${u.email}</p>
+              <button onclick="banUser(${u.id})">Ban</button>
+              <button class="delete" onclick="deleteUser(${u.id})">Delete</button>
+              <button onclick="sendSingleMail('${u.email}')">📧 Send</button>
+            </div>
+          `;
+        });
+
+        // 👇 أزرار التنقل
+        container.innerHTML += `
+          <button onclick="loadStudents(${page - 1})" ${page <= 1 ? "disabled" : ""}>⬅️</button>
+          <button onclick="loadStudents(${page + 1})">➡️</button>
+        `;
+      });
+    }
+
+    let currentSeekerPage = 1;
+
+    function loadSeekers(page = 1){
+      currentSeekerPage = page;
+
+      fetch(`http://localhost:5000/admin/seekers?page=${page}`, {
+        headers: { "Authorization": "Bearer " + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+
+        const container = document.getElementById("seekers");
+        container.innerHTML = "";
+
+        data.forEach(u => {
+          container.innerHTML += `
+            <div class="card">
+              <p>${u.email}</p>
+              <button onclick="banUser(${u.id})">Ban</button>
+              <button class="delete" onclick="deleteUser(${u.id})">Delete</button>
+              <button onclick="sendSingleMail('${u.email}')">📧 Send</button>
+            </div>
+          `;
+        });
+
+        container.innerHTML += `
+          <button onclick="loadSeekers(${page - 1})" ${page <= 1 ? "disabled" : ""}>⬅️</button>
+          <button onclick="loadSeekers(${page + 1})">➡️</button>
+        `;
+      });
+    }
+
+
+    function searchUsers() {
+      const query = document.getElementById("searchInput").value;
+
+      if (query.length === 0) {
+        document.getElementById("searchResults").innerHTML = "";
+        return;
+      }
+
+      fetch(`http://localhost:5000/admin/search?q=${query}`, {
+        headers: { "Authorization": "Bearer " + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+
+        const container = document.getElementById("searchResults");
+        container.innerHTML = "";
+
+        data.forEach(u => {
+          container.innerHTML += `
+            <div class="card">
+              <p><b>${u.name}</b> - ${u.email}</p>
+              <p>Role: ${u.role}</p>
+              <p>Status: ${u.banned ? "🚫 Banned" : "✅ Active"}</p>
+
+              ${!u.banned 
+                ? `<button onclick="banUser(${u.id})">Ban</button>` 
+                : `<button onclick="unbanUser(${u.id})">Unban</button>`
+              }
+
+              <button class="delete" onclick="deleteUser(${u.id})">Delete</button>
+              <button onclick="sendSingleMail('${u.email}')">📧 Send</button>
+            </div>
+          `;
+        });
+
+      });
+    }
+
+    
+
+      let chart;
+
+      function loadChart(data){
+
+        const ctx = document.getElementById("statsChart");
+
+        if(chart){
+          chart.destroy(); // 👈 مهم جدا
+        }
+
+        chart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: ["Users", "Owners", "Students", "Seekers"],
+            datasets: [{
+              label: "Statistiques",
+              data: [
+                data.totalUsers,
+                data.owners,
+                data.students,
+                data.seekers
+              ]
+            }]
+          }
+        });
+
+      }
+    
+      function sendSingleMail(email){
+
+        const message = prompt("Écrire le message pour " + email);
+
+        if(!message) return;
+
+        fetch("http://localhost:5000/admin/send-one-mail",{
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer "+token
+          },
+          body: JSON.stringify({
+            email: email,
+            message: message
+          })
+        });
+
+        alert("Email envoyé à " + email);
+      }
+
+
+    function deleteImage(id){
+      if(!confirm("Delete this image?")) return;
+
+      fetch(`http://localhost:5000/admin/images/${id}`,{
+        method:"DELETE",
+        headers:{
+          "Authorization":"Bearer "+token
+        }
+      })
+      .then(()=> {
+        alert("Image deleted ✅");
+        loadApprovedProperties();
+      });
+    }  
+
+
     function loadStats(){
 
       fetch("http://localhost:5000/admin/stats",{
@@ -292,23 +647,118 @@
       .then(data=>{
 
       document.getElementById("stats").innerHTML = `
-      <p>Nombre total d’utilisateurs: ${data.totalUsers}</p>
+      <p>Total utilisateurs: ${data.totalUsers}</p>
       <p>Propriétaires: ${data.owners}</p>
-      <p>Utilisateurs Interdits: ${data.bannedUsers}</p>
+      <p>Étudiants: ${data.students}</p>
+      <p>Chercheurs: ${data.seekers}</p>
+      <p>Visiteurs: ${data.visitors}</p>
+      <p>Utilisateurs bannis: ${data.bannedUsers}</p>
       <p>Biens en attente: ${data.pendingProperties}</p>
       <p>Biens approuvés: ${data.approvedProperties}</p>
       <p>Total biens: ${data.totalProperties}</p>
       `;
 
+      loadChart(data);
+
       });
 
     }
 
-    loadStats();
-    loadProperties();
-    loadOwners();
-    loadApprovedProperties();
-    loadHiddenProperties();
+
+    let currentEditId = null;
+
+      function editProperty(id){
+        currentEditId = id;
+        document.getElementById("editModal").classList.remove("hidden");
+      }
+
+      function closeEdit(){
+        document.getElementById("editModal").classList.add("hidden");
+      }
+
+      function saveEdit(){
+        const price = document.getElementById("editPrice").value;
+        const city = document.getElementById("editCity").value;
+        const files = document.getElementById("editImages").files;
+
+        // 1️⃣ تعديل البيانات
+        fetch(`http://localhost:5000/admin/properties/${currentEditId}`,{
+          method:"PUT",
+          headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer "+token
+          },
+          body: JSON.stringify({ price, city })
+        });
+
+        // 2️⃣ تعديل الصور
+        if(files.length > 0){
+          const formData = new FormData();
+          for(let f of files){
+            formData.append("media", f);
+          }
+
+          fetch(`http://localhost:5000/properties/${currentEditId}/images`,{
+            method:"POST",
+            headers:{
+              "Authorization":"Bearer "+token
+            },
+            body: formData
+          });
+        }
+
+        alert("Updated ✅");
+        closeEdit();
+        loadApprovedProperties();
+      }
+
+
+    function hideAllSections() {
+      document.querySelectorAll(".section").forEach(sec => {
+        sec.classList.add("hidden");
+      });
+    }
+
+    function showSection(id) {
+      hideAllSections();
+      document.getElementById(id).classList.remove("hidden");
+    }
+
+    function showStats(){
+      showSection("stats");
+      loadStats();
+    }
+
+    function showApproved(){
+      showSection("approvedSection");
+      loadApprovedProperties();
+    }
+
+    function showPending(){
+      showSection("pendingSection");
+      loadProperties();
+    }
+
+    function showHidden(){
+      showSection("hiddenSection");
+      loadHiddenProperties();
+    }
+
+    function showOwners(){
+      showSection("ownersSection");
+      loadOwners();
+    }
+
+       function showStudents(){
+      showSection("studentsSection");
+      loadStudents();
+    }
+
+    function showSeekers(){
+      showSection("seekersSection");
+      loadSeekers();
+    }
+    
     </script>
 
   </body>
