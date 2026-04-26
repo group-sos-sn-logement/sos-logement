@@ -1,3 +1,6 @@
+require("dotenv").config();
+console.log("CLOUD NAME:", process.env.CLOUDINARY_CLOUD_NAME);
+
 const express = require("express");
 const app = express();
 const path = require("path");
@@ -5,7 +8,7 @@ const path = require("path");
 const { body, validationResult } = require("express-validator");
 
 
-require("dotenv").config();
+
 
 const cloudinary = require("cloudinary").v2;
 
@@ -113,7 +116,7 @@ app.post("/contact", async (req, res) => {
   const { full_name, email, phone, subject, message, is_owner } = req.body;
 
   await transporter.sendMail({
-    to: "support@soslogement.zendesk.com",
+    to: "support@sossnlogement.freshdesk.com",
     subject: `📩 Contactez-nous ${full_name}`,
     text: `
   Nom: ${full_name}
@@ -136,31 +139,7 @@ app.post("/contact", async (req, res) => {
 
 app.use("/", router);
 
-router.post("/project-request", async (req, res) => {
-    const { full_name, email, phone, house_name, note, visiter } = req.body;
 
-    try {
-        await transporter.sendMail({
-            to: "support@soslogement.zendesk.com",
-            subject: `🏠 Une locataire - ${full_name}`,
-            text: `
-          Nom: ${full_name}
-          Email: ${email}
-          Téléphone: ${phone}
-
-          Nom du maison: ${house_name}
-          Est-ce qu' il veut visiter: ${visiter}
-          Note: ${note || "N/A"}
-          `
-        });
- 
-        res.status(200).json({ message: "Demande envoyée !" });
-    } catch(err){
-        console.error(err);
-        res.status(500).json({ message: "Erreur serveur" });
-    }
-    
-});
 
 
 
@@ -171,20 +150,24 @@ router.post("/project-request", async (req, res) => {
 app.get("/properties", async (req, res) => {
   try {
 
-  
-
     const result = await pool.query(`
-      SELECT p.*, 
-      ARRAY(
-        SELECT json_build_object(
-          'id', id,
-          'url', image_url
-        )
-        FROM property_images
-        WHERE property_id = p.id
-      ) AS images
+      SELECT 
+        p.*,
+        u.first_name,
+        u.last_name,
+        u.phone,
+        u.owner_ref,
+        ARRAY(
+          SELECT json_build_object(
+            'id', id,
+            'url', image_url
+          )
+          FROM property_images
+          WHERE property_id = p.id
+        ) AS images
       FROM properties p
-      WHERE status = 'approved'
+      JOIN users u ON p.owner_id = u.id
+      WHERE p.status = 'approved'
       ORDER BY p.id DESC
     `);
 
@@ -374,6 +357,10 @@ const streamUpload = (fileBuffer) => {
 
 app.post("/properties/:id/images", auth, upload.array("media", 10), async (req, res) => {
   try {
+
+      console.log("FILES:", req.files);
+
+
     const propertyId = req.params.id;
 
     // 🔥 1. جلب الصور القديمة
@@ -406,7 +393,7 @@ app.post("/properties/:id/images", auth, upload.array("media", 10), async (req, 
     res.json({ message: "Images replaced ✅" });
 
   } catch (err) {
-    console.error(err);
+    console.error("UPLOAD ERROR FULL:", err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 });
@@ -468,9 +455,27 @@ app.get("/my-properties", auth, async (req, res) => {
    AUTH
 ========================= */
 
+
+app.get("/admin/owners-full", auth, adminOnly, async (req, res) => {
+  const result = await pool.query(`
+    SELECT 
+      first_name,
+      last_name,
+      email,
+      phone,
+      conditions,
+      commission
+    FROM users
+    WHERE role = 'owner'
+    ORDER BY id DESC
+  `);
+
+  res.json(result.rows);
+});
+
 app.post("/owner-request", async (req, res) => {
   try {
-    const { first_name, last_name, email, password, phone } = req.body;
+    const { first_name, last_name, email, password, phone, conditions, commission } = req.body;
 
     const existingUser = await pool.query(
       "SELECT * FROM users WHERE email = $1",
@@ -486,10 +491,10 @@ app.post("/owner-request", async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO users 
-       (first_name, last_name, email, password, phone, role, approved)
-       VALUES ($1,$2,$3,$4,$5,'owner', false)
+      (first_name, last_name, email, password, phone, conditions, commission, role, approved)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,'owner', false)
        RETURNING id`,
-      [first_name, last_name, email, hashedPassword, phone]
+      [first_name, last_name, email, hashedPassword, phone, conditions, commission]
     );
 
     res.status(201).json({
@@ -596,7 +601,7 @@ app.post("/budget-request", async (req, res) => {
       [first_name, last_name, email, phone, zone, house_type, budget, user_type, students_number, note]
     );
     await transporter.sendMail({
-        to:"support@soslogement.zendesk.com",
+        to:"support@sossnlogement.freshdesk.com",
         subject: `Budget d' utilisateur  ${first_name} ${last_name}`,
         text: `
       Zone: ${zone}
@@ -636,7 +641,7 @@ app.post("/project-request", async (req, res) => {
       
     );
     await transporter.sendMail({
-      to: "support@soslogement.zendesk.com",
+      to: "support@sossnlogement.freshdesk.com",
       subject: `🏗️ Construire Project - ${full_name}`,
       text: `
     Nom: ${full_name}
@@ -677,9 +682,9 @@ app.post("/complaints", async (req, res) => {
       [first_name, last_name, email, tel, house_name, house_location, cause]
     );
 
-    // 🔥 إرسال إلى Zendesk
+    // 🔥 إرسال إلى freshdesk
     await transporter.sendMail({
-      to: "support@soslogement.zendesk.com", // ← غيّر هذا
+      to: "support@sossnlogement.freshdesk.com", // ← غيّر هذا
       subject: ` ⚖️ Porteur du plainte ${first_name} ${last_name}`,
       text: `
     Nom: ${first_name} ${last_name}
@@ -694,7 +699,7 @@ app.post("/complaints", async (req, res) => {
           `
       });
 
-    res.status(201).json({ message: "Complaint sent to Zendesk ✅" });
+    res.status(201).json({ message: "Complaint sent to freshdesk ✅" });
 
   } catch (err) {
     console.error(err);
@@ -706,6 +711,33 @@ app.post("/complaints", async (req, res) => {
 /* =========================
   ADMIN ROUTES
 ========================= */
+
+app.put("/change-password", auth, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  const userRes = await pool.query(
+    "SELECT password FROM users WHERE id=$1",
+    [req.user.id]
+  );
+
+  const user = userRes.rows[0];
+
+  const isMatch = await bcrypt.compare(oldPassword, user.password);
+
+  if (!isMatch) {
+    return res.status(400).json({ message: "Ancien mot de passe incorrect" });
+  }
+
+  const hashed = await bcrypt.hash(newPassword, 10);
+
+  await pool.query(
+    "UPDATE users SET password=$1 WHERE id=$2",
+    [hashed, req.user.id]
+  );
+
+  res.json({ message: "Mot de passe mis à jour" });
+});
+
 app.get("/admin/owner-requests", auth, adminOnly, async (req, res) => {
   try {
     const result = await pool.query(
@@ -721,10 +753,18 @@ app.get("/admin/owner-requests", auth, adminOnly, async (req, res) => {
 
 app.get("/admin/properties", auth, adminOnly, async (req, res) => {
   try {
-    const result = await pool.query(
-    "SELECT * FROM properties WHERE status='pending' ORDER BY id DESC"
-    );
-
+   const result = await pool.query(`
+      SELECT p.*, 
+              u.first_name, 
+              u.last_name, 
+              u.phone, 
+              u.owner_ref,
+              u.email
+      FROM properties p
+      JOIN users u ON p.owner_id = u.id
+      WHERE p.status = 'pending'
+      ORDER BY p.id DESC
+    `);
     res.json(result.rows);
 
   } catch (err) {
@@ -895,9 +935,18 @@ app.delete("/admin/users/:id", auth, adminOnly, async (req,res)=>{
 app.get("/admin/properties-approved", auth, adminOnly, async (req,res)=>{
   try{
 
-    const result = await pool.query(
-    "SELECT * FROM properties WHERE status='approved' ORDER BY id DESC"
-    );
+    const result = await pool.query(`
+      SELECT p.*, 
+              u.first_name, 
+              u.last_name, 
+              u.phone, 
+              u.owner_ref,
+              u.email
+      FROM properties p
+      JOIN users u ON p.owner_id = u.id
+      WHERE p.status = 'approved'
+      ORDER BY p.id DESC
+    `);
 
     res.json(result.rows);
 
@@ -911,9 +960,18 @@ app.get("/admin/properties-approved", auth, adminOnly, async (req,res)=>{
 app.get("/admin/properties-hidden", auth, adminOnly, async (req,res)=>{
   try{
 
-    const result = await pool.query(
-    "SELECT * FROM properties WHERE status='hidden' ORDER BY id DESC"
-    );
+    const result = await pool.query(`
+      SELECT p.*, 
+              u.first_name, 
+              u.last_name, 
+              u.phone, 
+              u.owner_ref,
+              u.email
+      FROM properties p
+      JOIN users u ON p.owner_id = u.id
+      WHERE p.status = 'hidden'
+      ORDER BY p.id DESC
+    `);
 
     res.json(result.rows);
 
@@ -926,7 +984,7 @@ app.get("/admin/properties-hidden", auth, adminOnly, async (req,res)=>{
 
 app.put("/admin/properties/:id/restore", auth, adminOnly, async (req,res)=>{
   await pool.query(
-  "UPDATE properties SET price=$1, city=$2, status='approved' WHERE id=$3",
+  "UPDATE properties SET status='approved' WHERE id=$1",
   [price, city, req.params.id]
 );
 
@@ -972,6 +1030,42 @@ app.put("/admin/properties/:id", auth, adminOnly, async (req,res)=>{
   }catch(err){
     console.error(err);
     res.status(500).json({message:"Erreur serveur"});
+  }
+});
+
+app.post("/admin/properties/:id/images", auth, adminOnly, upload.array("media", 10), async (req, res) => {
+  try {
+
+    const propertyId = req.params.id;
+
+    const oldImages = await pool.query(
+      "SELECT public_id FROM property_images WHERE property_id=$1",
+      [propertyId]
+    );
+
+    for (const img of oldImages.rows) {
+      await cloudinary.uploader.destroy(img.public_id);
+    }
+
+    await pool.query(
+      "DELETE FROM property_images WHERE property_id=$1",
+      [propertyId]
+    );
+
+    for (const file of req.files) {
+      const result = await streamUpload(file.buffer);
+
+      await pool.query(
+        "INSERT INTO property_images (property_id, image_url, public_id, type) VALUES ($1,$2,$3,$4)",
+        [propertyId, result.secure_url, result.public_id, result.resource_type]
+      );
+    }
+
+    res.json({ message: "Images updated by admin ✅" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erreur serveur" });
   }
 });
 
@@ -1131,17 +1225,24 @@ res.status(500).json({message:"Erreur serveur"});
 });
 
 app.get("/admin/search", auth, adminOnly, async (req, res) => {
-  const q = req.query.q;
+  const q = req.query.q?.replace(/\s/g, "").toLowerCase();
 
   if (!q) return res.json([]);
 
   const result = await pool.query(
-    `SELECT id, name, email, role, banned 
-     FROM users
-     WHERE name ILIKE $1 OR email ILIKE $1
-     ORDER BY id DESC`,
-    [`%${q}%`]
-  );
+  `SELECT id, first_name, last_name, email, role, banned, owner_ref
+   FROM users
+   WHERE
+   to_tsvector('simple',
+     COALESCE(first_name,'') || ' ' ||
+     COALESCE(last_name,'') || ' ' ||
+     COALESCE(email,'') || ' ' ||
+     COALESCE(owner_ref,'')
+   )
+   @@ plainto_tsquery('simple', $1)
+   ORDER BY id DESC`,
+  [q]
+);
 
   res.json(result.rows);
 });

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <title>Admin Dashboard</title>
-    <link rel="icon" href="S.O.S LOGEMENT.png">
+    <link rel="icon" href="SOS-LOGEMENT (1).png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
       body {
@@ -92,17 +92,101 @@
 
       
       .search {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        width: 300px;
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid #ccc;
+      position: absolute;
+      top: 20px;
+      right: 20px;
+
+      width: 45px;
+      height: 45px;
+
+      border-radius: 50%;
+      border: 1px solid #ccc;
+      padding: 10px;
+
+      transition: 0.3s;
+      overflow: hidden;
       }
+
+    /* عند التركيز */
+    .search:focus {
+      width: 300px;
+      border-radius: 8px;
+    }
+
+      /* زر دائري */
+      .menu-toggle {
+        display: none;
+      }
+
+      .overlay {
+        display: none;
+      }
+
+      /* 📱 موبايل فقط */
+      @media (max-width: 768px) {
+
+        .menu-toggle {
+          display: flex;
+          position: fixed;
+          top: 20px;
+          left: 20px;
+          width: 55px;
+          margin-bottom: 40px;
+          height: 55px;
+          border-radius: 50%;
+          background: #111827;
+          color: white;
+          font-size: 22px;
+          border: none;
+          z-index: 2000;
+          align-items: center;
+          justify-content: center;
+          transition: 0.3s;
+        }
+
+        .menu-toggle.hide {
+          display: none;
+        }
+
+        /* Sidebar يصبح مخفي */
+        .sidebar {
+          left: -250px;
+          transition: 0.3s;
+          z-index: 1500;
+        }
+
+        .sidebar.show {
+          left: 0;
+        }
+
+        /* Overlay */
+        .overlay {
+          position: fixed;
+          width: 100%;
+          height: 100%;
+          background: rgba(0,0,0,0.4);
+          z-index: 1400;
+        }
+
+        .overlay.show {
+          display: block;
+        }
+
+        /* إزالة margin لأن sidebar مخفي */
+        .content {
+          margin-left: 0;
+          padding-top: 80px;
+
+
+        }
+      }
+
     </style>
   </head>
   <body>
+
+  <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+  <div class="overlay" onclick="toggleMenu()"></div>
 
   <div class="layout">
 
@@ -115,6 +199,7 @@
       <button onclick="showPending()">📦 En attente</button>
       <button onclick="showHidden()">🙈 Masqués</button>
       <button onclick="showOwners()">👤 Propriétaires</button>
+      <button onclick="showOwnersFull()">📋 Infos complètes</button>
       <button onclick="showStudents()">🎓 Étudiants</button>
       <button onclick="showSeekers()">🔎 Chercheurs</button>
 
@@ -136,9 +221,10 @@
       class="search"
       type="text" 
       id="searchInput" 
-      placeholder="🔍 Rechercher par nom ou email..."
+      placeholder="🔍 Rechercher..."
       onkeyup="searchUsers()"
     >
+    
 
     <div id="searchResults"></div>
 
@@ -168,6 +254,11 @@
   <div id="ownersSection" class="section hidden">
     <h2>👤 Demandes propriétaires</h2>
     <div id="owners"></div>
+  </div>
+
+  <div id="ownersFullSection" class="section hidden">
+    <h2>📋 Informations complètes des propriétaires</h2>
+    <div id="ownersFull"></div>
   </div>
 
   <div id="studentsSection" class="section hidden">
@@ -226,9 +317,9 @@
 
       <hr>
 
-      <p>👤 Nom: ${p.User?.name || "N/A"}</p>
-      <p>🆔 Référence: ${p.User?.id || "N/A"}</p>
-      <p>📞 Téléphone: ${p.User?.phone || "N/A"}</p>
+      <p>👤 Nom: ${p.first_name + " " + p.last_name}</p>
+      <p>📞 Téléphone: ${p.phone || "N/A"}</p>
+      <p>🆔 Référence owner: ${p.owner_ref || "N/A"}</p>
 
       <button class="approve" onclick="approveProperty(${p.id})">Approve</button>
       <button onclick="hideProperty(${p.id})">Hide</button>
@@ -351,6 +442,57 @@
       });
     }
 
+    function loadOwnersFull(){
+      fetch("http://localhost:5000/admin/owners-full",{
+        headers:{
+          "Authorization":"Bearer " + token
+        }
+      })
+      .then(res=>res.json())
+      .then(data=>{
+
+        const container = document.getElementById("ownersFull");
+        container.innerHTML = "";
+
+        data.forEach(o=>{
+          container.innerHTML += `
+            <div class="card">
+              <p><b>Nom:</b> ${o.first_name} ${o.last_name}</p>
+              <p><b>Email:</b> ${o.email}</p>
+              <p><b>Téléphone:</b> ${o.phone || "N/A"}</p>
+              <p><b>Conditions:</b> ${o.conditions || "N/A"}</p>
+              <p><b>Commission:</b> ${o.commission || "N/A"}</p>
+            </div>
+          `;
+        });
+
+      });
+    }
+
+
+    function toggleMenu() {
+      const sidebar = document.querySelector(".sidebar");
+      const overlay = document.querySelector(".overlay");
+
+      sidebar.classList.toggle("show");
+      overlay.classList.toggle("show");
+    }
+
+    let lastScrollTop = 0;
+    const btn = document.querySelector('.menu-toggle');
+
+    window.addEventListener("scroll", () => {
+      let currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+
+      if (currentScroll > lastScrollTop) {
+        btn.classList.add("hide"); // ينزل → يختفي
+      } else {
+        btn.classList.remove("hide"); // يطلع → يظهر
+      }
+
+      lastScrollTop = currentScroll <= 0 ? 0 : currentScroll;
+    });
+
     function restoreProperty(id){
       fetch(`http://localhost:5000/admin/properties/${id}/restore`,{
       method:"PUT",
@@ -380,9 +522,9 @@
 
           <hr>
 
-          <p>👤 Nom: ${p.User?.name || "N/A"}</p>
-          <p>🆔 Référence: ${p.User?.id || "N/A"}</p>
-          <p>📞 Téléphone: ${p.User?.phone || "N/A"}</p>
+          <p>👤 Nom: ${p.first_name + " " + p.last_name}</p>
+          <p>📞 Téléphone: ${p.phone || "N/A"}</p>
+          <p>🆔 Référence owner: ${p.owner_ref || "N/A"}</p>
 
           <button onclick="editProperty(${p.id})">✏️ Edit</button>
           <button onclick="hideProperty(${p.id})">Hide</button>
@@ -531,7 +673,10 @@
 
 
     function searchUsers() {
+
+
       const query = document.getElementById("searchInput").value;
+
 
       if (query.length === 0) {
         document.getElementById("searchResults").innerHTML = "";
@@ -543,6 +688,9 @@
       })
       .then(res => res.json())
       .then(data => {
+
+        console.log(data);
+
 
         const container = document.getElementById("searchResults");
         container.innerHTML = "";
@@ -698,7 +846,7 @@
             formData.append("media", f);
           }
 
-          fetch(`http://localhost:5000/properties/${currentEditId}/images`,{
+          fetch(`http://localhost:5000/admin/properties/${currentEditId}/images`,{
             method:"POST",
             headers:{
               "Authorization":"Bearer "+token
@@ -757,6 +905,11 @@
     function showSeekers(){
       showSection("seekersSection");
       loadSeekers();
+    }
+
+    function showOwnersFull(){
+      showSection("ownersFullSection");
+      loadOwnersFull();
     }
     
     </script>
