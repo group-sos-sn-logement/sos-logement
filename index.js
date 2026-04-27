@@ -984,9 +984,9 @@ app.get("/admin/properties-hidden", auth, adminOnly, async (req,res)=>{
 
 app.put("/admin/properties/:id/restore", auth, adminOnly, async (req,res)=>{
   await pool.query(
-  "UPDATE properties SET status='approved' WHERE id=$1",
-  [price, city, req.params.id]
-);
+    "UPDATE properties SET status='approved' WHERE id=$1",
+    [req.params.id] // ✅ فقط هذا
+  );
 
   res.json({message:"Restored"});
 });
@@ -1249,8 +1249,3 @@ app.get("/admin/search", auth, adminOnly, async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
-
-
-
-
-
