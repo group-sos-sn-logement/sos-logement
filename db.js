@@ -1,8 +1,3 @@
-/*
-db.js
-يربط Node.js مع PostgreSQL
-*/
-
 require('dotenv').config();
 const { Pool } = require('pg');
 
