@@ -1,9 +1,11 @@
+const express = require("express");
+const app = express();
+
 app.set('trust proxy', 1);
 require("dotenv").config();
 console.log("CLOUD NAME:", process.env.CLOUDINARY_CLOUD_NAME);
 
-const express = require("express");
-const app = express();
+
 const path = require("path");
 
 const { body, validationResult } = require("express-validator");
@@ -151,7 +153,26 @@ app.use("/", router);
 app.get("/properties", async (req, res) => {
   try {
 
-        const result = await pool.query("SELECT * FROM properties");
+    const result = await pool.query(`
+      SELECT 
+        p.*,
+        u.first_name,
+        u.last_name,
+        u.phone,
+        u.owner_ref,
+        ARRAY(
+          SELECT json_build_object(
+            'id', id,
+            'url', image_url
+          )
+          FROM property_images
+          WHERE property_id = p.id
+        ) AS images
+      FROM properties p
+      JOIN users u ON p.owner_id = u.id
+      WHERE p.status = 'approved'
+      ORDER BY p.id DESC
+    `);
 
     res.json(result.rows);
 
@@ -517,7 +538,7 @@ app.post("/login", async (req, res) => {
     const token = jwt.sign(
       { id: user.id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "2H" } // قصير
+      { expiresIn: "15m" } // قصير
     );
 
     res.json({
