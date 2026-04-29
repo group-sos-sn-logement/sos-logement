@@ -1,7 +1,6 @@
 const express = require("express");
 const app = express();
 
-app.set('trust proxy', 1);
 require("dotenv").config();
 console.log("CLOUD NAME:", process.env.CLOUDINARY_CLOUD_NAME);
 
@@ -67,6 +66,9 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100
 });
+
+
+app.set('trust proxy', 1);
 
 app.use(limiter);
 
