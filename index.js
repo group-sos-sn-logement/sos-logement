@@ -175,7 +175,7 @@ app.get("/properties", async (req, res) => {
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Erreur serveur" });
+    res.status(500).json({ message: "Erreur /properties, async (req, res" });
   }
 });
 
