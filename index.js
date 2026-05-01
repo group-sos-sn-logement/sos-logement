@@ -478,34 +478,62 @@ app.get("/admin/owners-full", auth, adminOnly, async (req, res) => {
   res.json(result.rows);
 });
 
-app.post("/owner-request", async (req, res) => {
+app.post("/owner-request", auth, async (req, res) => {
   try {
-    const { first_name, last_name, email, password, phone, conditions, commission } = req.body;
+    const { phone, conditions, commission } = req.body;
 
-    const existingUser = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
+    await pool.query(
+      `UPDATE users 
+       SET 
+         phone = COALESCE($1, phone),
+         conditions = $2,
+         commission = $3,
+         owner_request = true
+       WHERE id = $4`,
+      [phone, conditions, commission, req.user.id]
     );
 
-   if(existingUser.rows.length > 0){
-      return res.status(400).json({message:"Email déjà utilisé"});
-    };
+    res.json({ message: "Demande envoyée ✅" });
 
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+// 🆕 لغير المسجلين
+app.post("/owner-request-public", async (req, res) => {
+  try {
+    const { first_name, last_name, email, phone, conditions, commission } = req.body;
 
-    const result = await pool.query(
-      `INSERT INTO users 
-      (first_name, last_name, email, password, phone, conditions, commission, role, approved)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,'owner', false)
-       RETURNING id`,
-      [first_name, last_name, email, hashedPassword, phone, conditions, commission]
+    // 🔥 هنا تختار ماذا تفعل:
+    // إما تخزنهم في DB
+    await pool.query(
+      `INSERT INTO owner_requests_public 
+      (first_name, last_name, email, phone, conditions, commission)
+      VALUES ($1,$2,$3,$4,$5,$6)`,
+      [first_name, last_name, email, phone, conditions, commission]
     );
 
-    res.status(201).json({
-      message: "Demande envoyée",
-      userId: result.rows[0].id
-    });
+    // أو فقط تبعث email
+    /*
+    await transporter.sendMail({
+      to: "support@sossnlogement.freshdesk.com",
+      subject: "Nouvelle demande propriétaire (non inscrit)",
+      text: `
+      Nom: ${first_name} ${last_name}
+      Email: ${email}
+      Téléphone: ${phone}
+
+      Conditions:
+      ${conditions}
+
+      Commission: ${commission}
+            `
+          });
+          */
+
+    res.json({ message: "Demande envoyée (public) ✅" });
 
   } catch (err) {
     console.error(err);
@@ -746,9 +774,14 @@ app.put("/change-password", auth, async (req, res) => {
 app.get("/admin/owner-requests", auth, adminOnly, async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT id, email, approved, banned FROM users WHERE role = 'owner' ORDER BY approved ASC, id DESC "
+      `SELECT id, email, owner_request, approved 
+       FROM users 
+       WHERE owner_request = true AND approved = false
+       ORDER BY id DESC`
     );
+
     res.json(result.rows);
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -847,8 +880,13 @@ app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
     const ref = numberToLetters(next) + "0";
 
     await pool.query(
-      "UPDATE users SET role='owner', approved=true, owner_sequence=$1, owner_ref=$2 WHERE id=$3",
-      [next, ref, userId]
+      `UPDATE users 
+      SET 
+        role = 'owner',
+        approved = true,
+        owner_request = false
+      WHERE id = $1`,
+      [userId]
     );
     await transporter.sendMail({
       from: '"S.O.S LOGEMENT" <' + process.env.EMAIL_USER + '>',
