@@ -470,6 +470,7 @@ app.get("/admin/owners-full", auth, adminOnly, async (req, res) => {
       phone,
       conditions,
       commission
+      owner_ref  
     FROM users
     WHERE role = 'owner'
     ORDER BY id DESC
@@ -843,9 +844,18 @@ app.post("/admin/public-owner-approve/:id", auth, adminOnly, async (req, res) =>
 
     await pool.query(
       `INSERT INTO users 
-      (first_name, last_name, email, phone, role, approved, password, owner_ref, owner_request)
-      VALUES ($1,$2,$3,$4,'owner',true,$5,$6,false)`,
-      [r.first_name, r.last_name, r.email, r.phone, hashedPassword, ref]
+      (first_name, last_name, email, phone, role, approved, password, owner_ref, owner_request, conditions, commission)
+      VALUES ($1,$2,$3,$4,'owner',true,$5,$6,false,$7,$8)`,
+      [
+        r.first_name,
+        r.last_name,
+        r.email,
+        r.phone,
+        hashedPassword,
+        ref,
+        r.conditions,
+        r.commission
+      ]
     );
 
     await pool.query(

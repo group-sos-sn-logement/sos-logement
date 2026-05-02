@@ -447,6 +447,7 @@
             <div class="card">
               <p><b>Nom:</b> ${o.first_name} ${o.last_name}</p>
               <p><b>Email:</b> ${o.email}</p>
+              <p><b>Référence:</b> ${o.owner_ref || "N/A"}</p> <!-- ✅ هنا -->
               <p><b>Téléphone:</b> ${o.phone || "N/A"}</p>
               <p><b>Conditions:</b> ${o.conditions || "N/A"}</p>
               <p><b>Commission:</b> ${o.commission || "N/A"}</p>
@@ -916,10 +917,16 @@
         headers: { "Authorization": "Bearer " + token }
       })
       .then(res => res.json())
-      .then(data => {
-        console.log(data);
+      .then(() => {
         alert("Approved ✅");
-        loadOwners();
+
+         loadOwners();       // تحديث قائمة الطلبات
+         showOwnersFull();   // 👈 الانتقال لصفحة الملاك
+         
+        // 👇 إعادة تحميل حقيقية
+        setTimeout(() => {
+          loadOwners();
+        }, 300);
       })
       .catch(err => console.error(err));
     }
