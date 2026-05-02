@@ -855,10 +855,7 @@
       });
     }
 
-    function showSection(id) {
-      hideAllSections();
-      document.getElementById(id).classList.remove("hidden");
-    }
+    
 
     function showSection(sectionId) {
         document.querySelectorAll(".section").forEach(sec => {
@@ -869,7 +866,7 @@
 
         // 👇 هنا السحر
         if (sectionId === "ownersSection") {
-            loadOwnerRequests();
+            loadOwners();
         }
     }
 
