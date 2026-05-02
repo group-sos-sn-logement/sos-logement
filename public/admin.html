@@ -914,8 +914,15 @@
     }
 
     function approvePublicOwner(id){
-      fetch(`/admin/public-owner-approve/${id}`, {
+      fetch(`https://sos-logement.onrender.com/admin/public-owner-approve/${id}`, {
         method: "POST",
+        headers: { "Authorization": "Bearer " + token }
+      }).then(() => loadOwners());
+    }
+
+    function deletePublicRequest(id){
+      fetch(`https://sos-logement.onrender.com/admin/public-owner-delete/${id}`, {
+        method: "DELETE",
         headers: { "Authorization": "Bearer " + token }
       }).then(() => loadOwners());
     }

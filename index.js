@@ -795,6 +795,16 @@ app.get("/admin/all-owner-requests", auth, adminOnly, async (req, res) => {
 });
 
 
+app.delete("/admin/public-owner-delete/:id", auth, adminOnly, async (req,res)=>{
+  await pool.query(
+    "DELETE FROM owner_requests_public WHERE id=$1",
+    [req.params.id]
+  );
+
+  res.json({message:"Deleted"});
+});
+
+
 app.post("/admin/public-owner-approve/:id", auth, adminOnly, async (req, res) => {
   try {
 
