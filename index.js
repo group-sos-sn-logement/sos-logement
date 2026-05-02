@@ -469,7 +469,7 @@ app.get("/admin/owners-full", auth, adminOnly, async (req, res) => {
       email,
       phone,
       conditions,
-      commission
+      commission,
       owner_ref  
     FROM users
     WHERE role = 'owner'
