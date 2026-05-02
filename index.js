@@ -771,6 +771,49 @@ app.put("/change-password", auth, async (req, res) => {
   res.json({ message: "Mot de passe mis à jour" });
 });
 
+app.get("/admin/all-owner-requests", auth, adminOnly, async (req, res) => {
+  try {
+
+    // 1️⃣ الطلبات من users
+    const usersReq = await pool.query(`
+      SELECT 
+        id,
+        first_name,
+        last_name,
+        email,
+        phone,
+        conditions,
+        commission,
+        'registered' as source
+      FROM users
+      WHERE owner_request = true AND approved = false
+    `);
+
+    // 2️⃣ الطلبات public
+    const publicReq = await pool.query(`
+      SELECT 
+        id,
+        first_name,
+        last_name,
+        email,
+        phone,
+        conditions,
+        commission,
+        'public' as source
+      FROM owner_requests_public
+    `);
+
+    // 3️⃣ دمجهم
+    const all = [...usersReq.rows, ...publicReq.rows];
+
+    res.json(all);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
 app.get("/admin/owner-requests", auth, adminOnly, async (req, res) => {
   try {
     const result = await pool.query(

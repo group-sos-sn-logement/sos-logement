@@ -393,51 +393,38 @@
       });
     }
             
-
     function loadOwners() {
-      fetch("https://sos-logement.onrender.com/admin/owner-requests", {
-      headers: { "Authorization": "Bearer " + token }
+      fetch("https://sos-logement.onrender.com/admin/all-owner-requests", {
+        headers: { "Authorization": "Bearer " + token }
       })
       .then(res => res.json())
       .then(data => {
 
-      const container = document.getElementById("owners");
-      container.innerHTML = "";
-
-      data.forEach(u => {
-
-      let status = "Pending";
-      if(u.approved) status = "Approved";
-      if(u.banned) status = "Banned";
-
-      container.innerHTML += `
-      <div class="card">
-
-      <p>
-      ${u.email} 
-      <br>
-      <b>Status: ${status}</b>
-      </p>
-
-      ${!u.approved && !u.banned ? 
-      `<button class="approve" onclick="approveOwner(${u.id})">Approve</button>` 
-      : ""}
-
-      ${!u.banned ? 
-      `<button onclick="banUser(${u.id})">Ban</button>` 
-      : 
-      `<button onclick="unbanUser(${u.id})">Unban</button>`
-      }
-
-      <button class="delete" onclick="deleteUser(${u.id})">Delete</button>
-      
-      <button onclick="sendSingleMail('${u.email}')">📧 Send</button>
+        const container = document.getElementById("owners");
+        container.innerHTML = "";
+        
+        data.forEach(u => {
 
 
-      </div>
-      `;
+          container.innerHTML += `
+            <div class="card">
 
-      });
+              <p><b>Nom:</b> ${u.first_name} ${u.last_name}</p>
+              <p><b>Email:</b> ${u.email}</p>
+              <p><b>Téléphone:</b> ${u.phone || "N/A"}</p>
+              <p><b>Conditions:</b> ${u.conditions}</p>
+              <p><b>Commission:</b> ${u.commission}</p>
+              <p><b>Source:</b> ${u.source}</p>
+
+              ${
+                u.source === "registered"
+                  ? `<button class="approve" onclick="approveOwner(${u.id})">Approve</button>`
+                  : `<button onclick="deletePublicRequest(${u.id})">Delete</button>`
+              }
+
+            </div>
+          `;
+        });
 
       });
     }
@@ -870,6 +857,19 @@
     function showSection(id) {
       hideAllSections();
       document.getElementById(id).classList.remove("hidden");
+    }
+
+    function showSection(sectionId) {
+        document.querySelectorAll(".section").forEach(sec => {
+            sec.classList.add("hidden");
+        });
+
+        document.getElementById(sectionId).classList.remove("hidden");
+
+        // 👇 هنا السحر
+        if (sectionId === "ownersSection") {
+            loadOwnerRequests();
+        }
     }
 
     function showStats(){
