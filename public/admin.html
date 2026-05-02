@@ -416,10 +416,11 @@
               <p><b>Commission:</b> ${u.commission}</p>
               <p><b>Source:</b> ${u.source}</p>
 
-              ${
+             ${
                 u.source === "registered"
-                  ? `<button class="approve" onclick="approveOwner(${u.id})">Approve</button>`
-                  : `<button onclick="deletePublicRequest(${u.id})">Delete</button>`
+                  ? `<button class="approve" onclick="approveOwner(${u.id})">Approve registered</button>`
+                  : `<button class="approve" onclick="approvePublicOwner(${u.id})">Approve public</button>
+                    <button class="delete" onclick="deletePublicRequest(${u.id})">Delete</button>`
               }
 
             </div>
@@ -911,7 +912,14 @@
       showSection("ownersFullSection");
       loadOwnersFull();
     }
-    
+
+    function approvePublicOwner(id){
+      fetch(`/admin/public-owner-approve/${id}`, {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + token }
+      }).then(() => loadOwners());
+    }
+
     </script>
 
   </body>

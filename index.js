@@ -478,29 +478,6 @@ app.get("/admin/owners-full", auth, adminOnly, async (req, res) => {
   res.json(result.rows);
 });
 
-app.post("/owner-request", auth, async (req, res) => {
-  try {
-    const { phone, conditions, commission } = req.body;
-
-    await pool.query(
-      `UPDATE users 
-       SET 
-         phone = COALESCE($1, phone),
-         conditions = $2,
-         commission = $3,
-         owner_request = true
-       WHERE id = $4`,
-      [phone, conditions, commission, req.user.id]
-    );
-
-    res.json({ message: "Demande envoyée ✅" });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Erreur serveur" });
-  }
-});
-
 // 🆕 لغير المسجلين
 app.post("/owner-request-public", async (req, res) => {
   try {
@@ -774,8 +751,8 @@ app.put("/change-password", auth, async (req, res) => {
 app.get("/admin/all-owner-requests", auth, adminOnly, async (req, res) => {
   try {
 
-    // 1️⃣ الطلبات من users
-    const usersReq = await pool.query(`
+    // 1. المستخدمين المسجلين
+    const registered = await pool.query(`
       SELECT 
         id,
         first_name,
@@ -784,12 +761,12 @@ app.get("/admin/all-owner-requests", auth, adminOnly, async (req, res) => {
         phone,
         conditions,
         commission,
-        'registered' as source
+        'registered' AS source
       FROM users
       WHERE owner_request = true AND approved = false
     `);
 
-    // 2️⃣ الطلبات public
+    // 2. غير المسجلين
     const publicReq = await pool.query(`
       SELECT 
         id,
@@ -799,14 +776,58 @@ app.get("/admin/all-owner-requests", auth, adminOnly, async (req, res) => {
         phone,
         conditions,
         commission,
-        'public' as source
+        'public' AS source
       FROM owner_requests_public
     `);
 
-    // 3️⃣ دمجهم
-    const all = [...usersReq.rows, ...publicReq.rows];
+    // دمج النتائج
+    const result = [
+      ...registered.rows,
+      ...publicReq.rows
+    ];
 
-    res.json(all);
+    res.json(result);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
+
+app.post("/admin/public-owner-approve/:id", auth, adminOnly, async (req, res) => {
+  try {
+
+    // 1. نجيب الطلب
+    const request = await pool.query(
+      "SELECT * FROM owner_requests_public WHERE id=$1",
+      [req.params.id]
+    );
+
+    if (request.rows.length === 0) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    const r = request.rows[0];
+
+    // 2. نحوله إلى user حقيقي
+    const hashedPassword = await bcrypt.hash("temp12345", 10);
+
+    const newUser = await pool.query(
+      `INSERT INTO users 
+      (first_name, last_name, email, phone, role, approved, password, owner_request)
+      VALUES ($1,$2,$3,$4,'owner',true,$5,false)
+      RETURNING id`,
+      [r.first_name, r.last_name, r.email, r.phone, hashedPassword]
+    );
+
+    // 3. حذف الطلب القديم
+    await pool.query(
+      "DELETE FROM owner_requests_public WHERE id=$1",
+      [req.params.id]
+    );
+
+    res.json({ message: "Public user approved as owner" });
 
   } catch (err) {
     console.error(err);
