@@ -443,6 +443,46 @@ app.put("/properties/:id/cover", auth, async (req, res) => {
    MY PROPERTIES
 ========================= */
 
+
+app.post("/register-owner",
+  body("email").isEmail(),
+  body("password").isLength({ min: 6 }), // ✅ هنا تضيفه
+
+  async (req, res) => {
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const { first_name, last_name, email, phone, password, conditions, commission } = req.body;
+
+      const existing = await pool.query(
+        "SELECT * FROM users WHERE email=$1",
+        [email]
+      );
+
+      if (existing.rows.length > 0) {
+        return res.status(400).json({ message: "Email déjà utilisé" });
+      }
+
+      const hashed = await bcrypt.hash(password, 10);
+
+      await pool.query(`
+        INSERT INTO users 
+        (first_name, last_name, email, phone, password, role, approved, owner_request, conditions, commission)
+        VALUES ($1,$2,$3,$4,$5,'owner',false,true,$6,$7)
+      `, [first_name, last_name, email, phone, hashed, conditions, commission]);
+
+      res.json({ message: "Owner account created (pending approval)" });
+
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+});
+
 app.get("/my-properties", auth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -979,15 +1019,14 @@ app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
 
     const ref = numberToLetters(next) + "0";
 
-    await pool.query(
-      `UPDATE users 
+    await pool.query(`
+      UPDATE users 
       SET 
         role = 'owner',
         approved = true,
         owner_request = false
-      WHERE id = $1`,
-      [userId]
-    );
+      WHERE id = $1
+    `, [userId]);
     await transporter.sendMail({
       from: '"S.O.S LOGEMENT" <' + process.env.EMAIL_USER + '>',
       to: user.rows[0].email,
