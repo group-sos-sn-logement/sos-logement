@@ -808,7 +808,6 @@ app.delete("/admin/public-owner-delete/:id", auth, adminOnly, async (req,res)=>{
 app.post("/admin/public-owner-approve/:id", auth, adminOnly, async (req, res) => {
   try {
 
-    // 1. نجيب الطلب
     const request = await pool.query(
       "SELECT * FROM owner_requests_public WHERE id=$1",
       [req.params.id]
@@ -820,24 +819,41 @@ app.post("/admin/public-owner-approve/:id", auth, adminOnly, async (req, res) =>
 
     const r = request.rows[0];
 
-    // 2. نحوله إلى user حقيقي
-    const hashedPassword = await bcrypt.hash("temp12345", 10);
+    // 👇 توليد reference
+    function numberToLetters(num) {
+      let letters = '';
+      while (num >= 0) {
+        letters = String.fromCharCode((num % 26) + 65) + letters;
+        num = Math.floor(num / 26) - 1;
+      }
+      return letters;
+    }
 
-    const newUser = await pool.query(
-      `INSERT INTO users 
-      (first_name, last_name, email, phone, role, approved, password, owner_request)
-      VALUES ($1,$2,$3,$4,'owner',true,$5,false)
-      RETURNING id`,
-      [r.first_name, r.last_name, r.email, r.phone, hashedPassword]
+    const result = await pool.query(
+      "SELECT MAX(owner_sequence) as max FROM users WHERE owner_sequence IS NOT NULL"
     );
 
-    // 3. حذف الطلب القديم
+    let next = result.rows[0].max !== null
+      ? result.rows[0].max + 1
+      : 0;
+
+    const ref = numberToLetters(next) + "0";
+
+    const hashedPassword = await bcrypt.hash("temp12345", 10);
+
+    await pool.query(
+      `INSERT INTO users 
+      (first_name, last_name, email, phone, role, approved, password, owner_ref, owner_request)
+      VALUES ($1,$2,$3,$4,'owner',true,$5,$6,false)`,
+      [r.first_name, r.last_name, r.email, r.phone, hashedPassword, ref]
+    );
+
     await pool.query(
       "DELETE FROM owner_requests_public WHERE id=$1",
       [req.params.id]
     );
 
-    res.json({ message: "Public user approved as owner" });
+    res.json({ message: "Public user approved as owner", ref });
 
   } catch (err) {
     console.error(err);

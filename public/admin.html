@@ -914,7 +914,14 @@
       fetch(`https://sos-logement.onrender.com/admin/public-owner-approve/${id}`, {
         method: "POST",
         headers: { "Authorization": "Bearer " + token }
-      }).then(() => loadOwners());
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log(data);
+        alert("Approved ✅");
+        loadOwners();
+      })
+      .catch(err => console.error(err));
     }
 
     function deletePublicRequest(id){
