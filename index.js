@@ -302,27 +302,33 @@ if (user.role !== "owner" || user.approved !== true) {
     const prefix = owner.rows[0].owner_ref;
 
     const lastCodeRes = await pool.query(
-      "SELECT property_code FROM properties WHERE owner_id = $1 ORDER BY id DESC LIMIT 1",
+      `SELECT property_code 
+      FROM properties 
+      WHERE owner_id = $1 
+      ORDER BY id DESC 
+      LIMIT 1`,
       [ownerId]
     );
 
-    let newNumber = 1;
+    let nextNumber = 1;
+
     if (lastCodeRes.rows[0]) {
       const lastCode = lastCodeRes.rows[0].property_code;
-      const numPart = parseInt(lastCode.slice(prefix.length), 10);
-      newNumber = numPart + 1;
+
+      // استخراج الرقم الأخير (بعد -)
+      const parts = lastCode.split("-");
+      nextNumber = parseInt(parts[1], 10) + 1;
     }
 
-    const propertyCode =
-      newNumber < 10000
-        ? `${prefix}${String(newNumber).padStart(4, "0")}`
-        : `${prefix}${newNumber}`;
+    const propertyCode = `${prefix}-${String(nextNumber).padStart(4, "0")}`;
 
-      // تنظيف السعر من فراغات أو فاصلة
-      let cleanedPrice = Number(price.toString().replace(/\s/g,'').replace(/,/g,''));
-      if(isNaN(cleanedPrice)){
-        return res.status(400).json({ message: "Prix invalide" });
-      }
+    
+
+    // تنظيف السعر من فراغات أو فاصلة
+    let cleanedPrice = Number(price.toString().replace(/\s/g,'').replace(/,/g,''));
+    if(isNaN(cleanedPrice)){
+      return res.status(400).json({ message: "Prix invalide" });
+    }
     const result = await pool.query(
       `INSERT INTO properties 
        (owner_id, property_code, title, type, description, city, exact_location, price, chambres, cuisine, sdb, salon, is_student, max_students, status)
@@ -445,8 +451,13 @@ app.put("/properties/:id/cover", auth, async (req, res) => {
 
 
 app.post("/register-owner",
-  body("email").isEmail(),
-  body("password").isLength({ min: 6 }), // ✅ هنا تضيفه
+  body("email").isEmail().withMessage("Email invalide"),
+  body("password")
+    .isLength({ min: 6 })
+    .withMessage("Mot de passe doit contenir au moins 6 caractères"),
+  body("first_name").notEmpty().withMessage("Prénom requis"),
+  body("last_name").notEmpty().withMessage("Nom requis"),
+  body("phone").notEmpty().withMessage("Téléphone requis"),
 
   async (req, res) => {
 
@@ -458,8 +469,9 @@ app.post("/register-owner",
     try {
       const { first_name, last_name, email, phone, password, conditions, commission } = req.body;
 
+      // 🔍 تحقق من وجود المستخدم
       const existing = await pool.query(
-        "SELECT * FROM users WHERE email=$1",
+        "SELECT id FROM users WHERE email=$1",
         [email]
       );
 
@@ -467,15 +479,17 @@ app.post("/register-owner",
         return res.status(400).json({ message: "Email déjà utilisé" });
       }
 
+      // 🔐 تشفير الباسورد
       const hashed = await bcrypt.hash(password, 10);
 
+      // 🆕 إنشاء owner (غير مُوافق عليه)
       await pool.query(`
         INSERT INTO users 
         (first_name, last_name, email, phone, password, role, approved, owner_request, conditions, commission)
         VALUES ($1,$2,$3,$4,$5,'owner',false,true,$6,$7)
       `, [first_name, last_name, email, phone, hashed, conditions, commission]);
 
-      res.json({ message: "Owner account created (pending approval)" });
+      res.json({ message: "Compte propriétaire créé (en attente de validation)" });
 
     } catch (err) {
       console.error(err);
@@ -1024,9 +1038,11 @@ app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
       SET 
         role = 'owner',
         approved = true,
-        owner_request = false
+        owner_request = false,
+        owner_ref = $2,
+        owner_sequence = $3
       WHERE id = $1
-    `, [userId]);
+    `, [userId, ref, next]);
     await transporter.sendMail({
       from: '"S.O.S LOGEMENT" <' + process.env.EMAIL_USER + '>',
       to: user.rows[0].email,
