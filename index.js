@@ -701,32 +701,85 @@ app.post("/project-request", async (req, res) => {
       ideas
     } = req.body;
 
+    if (!full_name || !email || !phone) {
+      return res.status(400).json({ message: "Champs obligatoires manquants" });
+    }
 
+    // 💾 حفظ في قاعدة البيانات
     await pool.query(
-      `INSERT INTO project_requests
+      `INSERT INTO diaspora_requests 
       (full_name, email, phone, country, project_type, budget, land_status, ideas)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
       [full_name, email, phone, country, project_type, budget, land_status, ideas]
-      
     );
+
+    // 📩 إرسال للإيميل (كما عندك)
     await transporter.sendMail({
       to: "support@sossnlogement.freshdesk.com",
-      subject: `🏗️ Construire Project - ${full_name}`,
+      subject: `🏗️ Projet extérieur - ${full_name}`,
       text: `
-    Nom: ${full_name}
-    Email: ${email}
-    Téléphone: ${phone}
-    Pays: ${country}
+      Nom: ${full_name}
+      Email: ${email}
+      Téléphone: ${phone}
+      Pays: ${country}
 
-    Type de projet: ${project_type}
-    Leur budget: ${budget}
-    Chercheur du maison: ${land_status}
+      Type: ${project_type}
+      Budget: ${budget}
+      Terrain: ${land_status}
 
-    Leur Idées:
-    ${ideas}
+      Idées:
+      ${ideas}
       `
     });
+
     res.json({ message: "Demande envoyée avec succès" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
+app.get("/admin/diaspora", auth, adminOnly, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM diaspora_requests ORDER BY id DESC"
+    );
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
+app.delete("/admin/diaspora/:id", auth, adminOnly, async (req, res) => {
+  try {
+    await pool.query(
+      "DELETE FROM diaspora_requests WHERE id=$1",
+      [req.params.id]
+    );
+
+    res.json({ message: "Deleted" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
+app.post("/admin/reply-diaspora", auth, adminOnly, async (req, res) => {
+  try {
+    const { email, message } = req.body;
+
+    await transporter.sendMail({
+      to: email,
+      subject: "Réponse de S.O.S LOGEMENT",
+      text: message
+    });
+
+    res.json({ message: "Reply sent" });
 
   } catch (err) {
     console.error(err);

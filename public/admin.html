@@ -202,6 +202,9 @@
       <button onclick="showOwnersFull()">📋 Infos complètes</button>
       <button onclick="showStudents()">🎓 Étudiants</button>
       <button onclick="showSeekers()">🔎 Chercheurs</button>
+      <hr> 
+      <hr>
+      <button onclick="showDiaspora()">🌍 Diaspora</button>
 
       <hr>
 
@@ -271,6 +274,10 @@
     <div id="seekers"></div>
   </div>
 
+  <div id="diasporaSection" class="section hidden">
+    <h2>🌍 Messages Diaspora</h2>
+    <div id="diasporaMessages"></div>
+  </div>
 
   <div id="editModal" class="hidden card">
     <h3>Edit Property</h3>
@@ -577,6 +584,70 @@
       }).then(()=>{
         loadOwnersFull(); // ✅
       });
+    }
+
+    function loadDiasporaMessages() {
+      fetch("https://sos-logement.onrender.com/admin/diaspora", {
+        headers: { "Authorization": "Bearer " + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+
+        const container = document.getElementById("diasporaMessages");
+        container.innerHTML = "";
+
+        data.forEach(msg => {
+          container.innerHTML += `
+            <div class="card">
+              <p><b>Nom:</b> ${msg.name}</p>
+              <p><b>Email:</b> ${msg.email}</p>
+              <p><b>Téléphone:</b> ${msg.phone || "N/A"}</p>
+              <p><b>Pays:</b> ${msg.country || "N/A"}</p>
+
+              <hr>
+
+              <p><b>Message:</b></p>
+              <p>${msg.message}</p>
+
+              <hr>
+
+              <button onclick="replyDiaspora('${msg.email}')">📧 Répondre</button>
+              <button class="delete" onclick="deleteDiaspora(${msg.id})">🗑️ Supprimer</button>
+            </div>
+          `;
+        });
+
+      });
+    }
+
+    function replyDiaspora(email){
+      const message = prompt("Écrire votre réponse pour " + email);
+
+      if(!message) return;
+
+      fetch("https://sos-logement.onrender.com/admin/reply-diaspora", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({
+          email: email,
+          message: message
+        })
+      });
+
+      alert("Réponse envoyée ✅");
+    }
+
+    function deleteDiaspora(id){
+      if(!confirm("Supprimer ce message ?")) return;
+
+      fetch(`https://sos-logement.onrender.com/admin/diaspora/${id}`, {
+        method: "DELETE",
+        headers: { "Authorization": "Bearer " + token }
+      })
+      .then(() => loadDiasporaMessages());
     }
 
     
@@ -951,6 +1022,11 @@
         method: "DELETE",
         headers: { "Authorization": "Bearer " + token }
       }).then(() => loadOwners());
+    }
+
+    function showDiaspora(){
+      showSection("diasporaSection");
+      loadDiasporaMessages();
     }
 
     </script>
