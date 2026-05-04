@@ -553,24 +553,30 @@
     }
 
     function deleteUser(id){
-    fetch(`https://sos-logement.onrender.com/admin/users/${id}`,{
-    method:"DELETE",
-    headers:{ "Authorization": "Bearer " + token }
-    }).then(()=>loadOwners());
+      fetch(`https://sos-logement.onrender.com/admin/users/${id}`,{
+        method:"DELETE",
+        headers:{ "Authorization": "Bearer " + token }
+      }).then(()=>{
+        loadOwnersFull(); // ✅ بدل loadOwners
+      });
     }
 
     function banUser(id){
       fetch(`https://sos-logement.onrender.com/admin/users/${id}/ban`,{
-      method:"PUT",
-      headers:{ "Authorization": "Bearer " + token }
-      }).then(()=>loadOwners());
-      }
+        method:"PUT",
+        headers:{ "Authorization": "Bearer " + token }
+      }).then(()=>{
+        loadOwnersFull(); // ✅
+      });
+    }
 
-      function unbanUser(id){
+    function unbanUser(id){
       fetch(`https://sos-logement.onrender.com/admin/users/${id}/unban`,{
-      method:"PUT",
-      headers:{ "Authorization": "Bearer " + token }
-      }).then(()=>loadOwners());
+        method:"PUT",
+        headers:{ "Authorization": "Bearer " + token }
+      }).then(()=>{
+        loadOwnersFull(); // ✅
+      });
     }
 
     
