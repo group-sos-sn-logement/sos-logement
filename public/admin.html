@@ -447,10 +447,19 @@
             <div class="card">
               <p><b>Nom:</b> ${o.first_name} ${o.last_name}</p>
               <p><b>Email:</b> ${o.email}</p>
-              <p><b>Référence:</b> ${o.owner_ref || "N/A"}</p> <!-- ✅ هنا -->
+              <p><b>Référence:</b> ${o.owner_ref || "N/A"}</p>
               <p><b>Téléphone:</b> ${o.phone || "N/A"}</p>
               <p><b>Conditions:</b> ${o.conditions || "N/A"}</p>
               <p><b>Commission:</b> ${o.commission || "N/A"}</p>
+
+              <hr>
+
+              <button onclick="sendSingleMail('${o.email}')">📧 Envoyer</button>
+              <button class="delete" onclick="deleteUser(${o.id})">🗑️ Supprimer</button>
+                ${o.banned 
+                ? `<button onclick="unbanUser(${o.id})">✅ Débloquer</button>`
+                : `<button onclick="banUser(${o.id})">🚫 Bloquer</button>`
+              }
             </div>
           `;
         });

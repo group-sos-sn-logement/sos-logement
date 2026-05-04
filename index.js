@@ -518,13 +518,15 @@ app.get("/my-properties", auth, async (req, res) => {
 app.get("/admin/owners-full", auth, adminOnly, async (req, res) => {
   const result = await pool.query(`
     SELECT 
+      id,
       first_name,
       last_name,
       email,
       phone,
       conditions,
       commission,
-      owner_ref  
+      owner_ref,
+      banned  
     FROM users
     WHERE role = 'owner'
     ORDER BY id DESC
