@@ -76,6 +76,21 @@ app.use(limiter);
 app.get("/", (req, res) => {
   res.send("Server is working 🚀");
 });
+
+app.use(helmet());
+const nodemailer = require("nodemailer");
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 587, // 👈 مهم بدل 465
+  secure: false, // 👈 مهم
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+let visitors = 0;
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 const allowedOrigins = [
@@ -97,7 +112,7 @@ app.use(cors({
     if (
       origin.startsWith("http://127.0.0.1") ||
       origin.startsWith("http://localhost") ||
-      origin === "https://dynamic-kataifi-a54e97.netlify.app" ||
+      origin.startsWith("https://dynamic-kataifi-a54e97.netlify.app") ||
       origin === "https://sos-logement.onrender.com"
     ) {
       return callback(null, true);
@@ -107,21 +122,6 @@ app.use(cors({
   },
   credentials: true
 }));
-
-
-app.use(helmet());
-const nodemailer = require("nodemailer");
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587, // 👈 مهم بدل 465
-  secure: false, // 👈 مهم
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
-
-let visitors = 0;
 
 app.use((req, res, next) => {
   if (!req.headers.authorization) {
