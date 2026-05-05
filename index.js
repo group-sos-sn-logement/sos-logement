@@ -2,6 +2,34 @@ const express = require("express");
 const app = express();
 
 require("dotenv").config();
+
+const cors = require("cors");
+const helmet = require("helmet");
+
+const allowedOrigins = [
+  "http://127.0.0.1:5501",
+  "http://localhost:5501",
+  "http://127.0.0.1:5502",
+  "http://localhost:5000",
+  "https://dynamic-kataifi-a54e97.netlify.app",
+  "https://sos-logement.onrender.com"
+].filter(Boolean);
+
+app.use(helmet());
+
+
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true
+}));
+
+app.options("*", cors());
+
+app.use(express.json());
+
+app.use(express.urlencoded({ extended: true }));
+
 console.log("CLOUD NAME:", process.env.CLOUDINARY_CLOUD_NAME);
 
 
@@ -23,8 +51,6 @@ cloudinary.config({
 const streamifier = require("streamifier");
 
 const bcrypt = require('bcrypt');
-const cors = require('cors');
-const helmet = require('helmet');
 const pool = require('./db');
 
 const router = express.Router();
@@ -79,18 +105,6 @@ app.get("/", (req, res) => {
 
 
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-const allowedOrigins = [
-  "http://127.0.0.1:5501",
-  "http://localhost:5501",
-  "http://127.0.0.1:5502",
-  "http://localhost:5000",
-  "https://dynamic-kataifi-a54e97.netlify.app",
-  "https://sos-logement.onrender.com"
-].filter(Boolean);
-
-app.use(helmet());
 const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
@@ -106,10 +120,6 @@ let visitors = 0;
 
 
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
-}));
 
 app.use((req, res, next) => {
   if (!req.headers.authorization) {
