@@ -86,8 +86,9 @@ const allowedOrigins = [
   "http://localhost:5501",
   "http://127.0.0.1:5502",
   "http://localhost:5000",
-  process.env.FRONTEND_URL
-];
+  "https://dynamic-kataifi-a54e97.netlify.app",
+  "https://sos-logement.onrender.com"
+].filter(Boolean);
 
 app.use(helmet());
 const nodemailer = require("nodemailer");
@@ -103,6 +104,12 @@ const transporter = nodemailer.createTransport({
 
 let visitors = 0;
 
+
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 
 app.use((req, res, next) => {
   if (!req.headers.authorization) {
