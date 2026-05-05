@@ -177,10 +177,6 @@ app.post("/contact", async (req, res) => {
 
 app.use("/", router);
 
-/* =========================
-   PROPERTIES (PUBLIC)
-========================= */
-
 app.get("/properties", async (req, res) => {
   try {
 
@@ -248,7 +244,6 @@ app.post("/register",
     body("email").isEmail(),
   body("password").isLength({ min: 6 }),
   async (req, res) => {
-
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -361,7 +356,6 @@ if (user.role !== "owner" || user.approved !== true) {
        RETURNING *`,
       [ownerId, propertyCode, title, type, description, city, exact_location, cleanedPrice, chambres, cuisine, sdb, salon, is_student, max_students]
     );
-
     res.json({ message: "Bien ajouté", property: result.rows[0] });
 
   } catch (err) {
@@ -555,7 +549,6 @@ app.get("/admin/owners-full", auth, adminOnly, async (req, res) => {
     WHERE role = 'owner'
     ORDER BY id DESC
   `);
-
   res.json(result.rows);
 });
 
@@ -866,7 +859,6 @@ app.put("/change-password", auth, async (req, res) => {
   const user = userRes.rows[0];
 
   const isMatch = await bcrypt.compare(oldPassword, user.password);
-
   if (!isMatch) {
     return res.status(400).json({ message: "Ancien mot de passe incorrect" });
   }
@@ -1158,7 +1150,6 @@ app.delete("/admin/images/:id", auth, adminOnly, async (req,res)=>{
     if(result.rows.length === 0){
       return res.status(404).json({message:"Image not found"});
     }
-
     const public_id = result.rows[0].public_id;
 
     // 2️⃣ نحذف من Cloudinary
@@ -1251,7 +1242,6 @@ app.get("/admin/properties-hidden", auth, adminOnly, async (req,res)=>{
     res.status(500).json({message:"Erreur serveur"});
   }
 });
-
 app.put("/admin/properties/:id/restore", auth, adminOnly, async (req,res)=>{
   await pool.query(
     "UPDATE properties SET status='approved' WHERE id=$1",
@@ -1276,7 +1266,6 @@ app.delete("/admin/properties/:id", auth, adminOnly, async (req,res)=>{
     await pool.query("DELETE FROM properties WHERE id=$1",[req.params.id]);
 
     res.json({message:"Property deleted"});
-
     }catch(err){
     console.error(err);
     res.status(500).json({message:"Erreur serveur"});
@@ -1287,8 +1276,7 @@ app.put("/admin/properties/:id", auth, adminOnly, async (req,res)=>{
   try{
 
     const { price, city } = req.body;
-
-    await pool.query(
+      await pool.query(
       "UPDATE properties SET price=$1, city=$2 WHERE id=$3",
       [price, city, req.params.id]
     );
@@ -1436,7 +1424,7 @@ app.get("/admin/stats", auth, adminOnly, async (req,res)=>{
 try{
 
 const totalUsers = await pool.query(
-"SELECT COUNT(*) FROM users"
+  "SELECT COUNT(*) FROM users"
 );
 
 const owners = await pool.query(
@@ -1452,7 +1440,7 @@ const pendingProperties = await pool.query(
 );
 
 const approvedProperties = await pool.query(
-"SELECT COUNT(*) FROM properties WHERE status='approved'"
+  "SELECT COUNT(*) FROM properties WHERE status='approved'"
 );
 
 const totalProperties = await pool.query(
@@ -1468,15 +1456,16 @@ const seekers = await pool.query(
 );
 
 res.json({
-totalUsers: totalUsers.rows[0].count,
-owners: owners.rows[0].count,
-bannedUsers: bannedUsers.rows[0].count,
-pendingProperties: pendingProperties.rows[0].count,
-approvedProperties: approvedProperties.rows[0].count,
-totalProperties: totalProperties.rows[0].count,
-students: students.rows[0].count,
-seekers: seekers.rows[0].count,
-visitors: visitors
+
+  totalUsers: totalUsers.rows[0].count,
+  owners: owners.rows[0].count,
+  bannedUsers: bannedUsers.rows[0].count,
+  pendingProperties: pendingProperties.rows[0].count,
+  approvedProperties: approvedProperties.rows[0].count,
+  totalProperties: totalProperties.rows[0].count,
+  students: students.rows[0].count,
+  seekers: seekers.rows[0].count,
+  visitors: visitors
 });
 
 }catch(err){
