@@ -33,6 +33,9 @@ app.use(express.urlencoded({ extended: true }));
 console.log("CLOUD NAME:", process.env.CLOUDINARY_CLOUD_NAME);
 
 
+
+
+
 const path = require("path");
 
 const { body, validationResult } = require("express-validator");
