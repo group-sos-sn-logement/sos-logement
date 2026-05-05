@@ -177,10 +177,6 @@ app.post("/contact", async (req, res) => {
 
 app.use("/", router);
 
-
-
-
-
 /* =========================
    PROPERTIES (PUBLIC)
 ========================= */
@@ -248,8 +244,6 @@ app.get("/property/:code", async (req, res) => {
 /* =========================
    ADD PROPERTY
 ========================= */
-
-
 app.post("/register",
     body("email").isEmail(),
   body("password").isLength({ min: 6 }),
@@ -354,8 +348,6 @@ if (user.role !== "owner" || user.approved !== true) {
     }
 
     const propertyCode = `${prefix}-${String(nextNumber).padStart(4, "0")}`;
-
-    
 
     // تنظيف السعر من فراغات أو فاصلة
     let cleanedPrice = Number(price.toString().replace(/\s/g,'').replace(/,/g,''));
@@ -546,7 +538,6 @@ app.get("/my-properties", auth, async (req, res) => {
 /* =========================
    AUTH
 ========================= */
-
 
 app.get("/admin/owners-full", auth, adminOnly, async (req, res) => {
   const result = await pool.query(`
@@ -860,7 +851,6 @@ app.post("/complaints", async (req, res) => {
   }
 });
 
-
 /* =========================
   ADMIN ROUTES
 ========================= */
@@ -1088,7 +1078,6 @@ await pool.query(
 res.json({message:"Hidden"});
 });
 
-
 app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
   try {
     const userId = req.params.id;
@@ -1149,7 +1138,6 @@ app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
   }
 });
 
-
 app.delete("/admin/images/:id", auth, adminOnly, async (req,res)=>{
   try {
 
@@ -1189,8 +1177,6 @@ app.delete("/admin/images/:id", auth, adminOnly, async (req,res)=>{
     res.status(500).json({message:"Erreur serveur"});
   }
 });
-
-
 
 app.delete("/admin/users/:id", auth, adminOnly, async (req,res)=>{
   try{
@@ -1242,7 +1228,6 @@ app.get("/admin/properties-approved", auth, adminOnly, async (req,res)=>{
   }
 });
 
-
 app.get("/admin/properties-hidden", auth, adminOnly, async (req,res)=>{
   try{
 
@@ -1267,7 +1252,6 @@ app.get("/admin/properties-hidden", auth, adminOnly, async (req,res)=>{
   }
 });
 
-
 app.put("/admin/properties/:id/restore", auth, adminOnly, async (req,res)=>{
   await pool.query(
     "UPDATE properties SET status='approved' WHERE id=$1",
@@ -1276,7 +1260,6 @@ app.put("/admin/properties/:id/restore", auth, adminOnly, async (req,res)=>{
 
   res.json({message:"Restored"});
 });
-
 
 app.delete("/admin/properties/:id", auth, adminOnly, async (req,res)=>{
   try{
@@ -1299,7 +1282,6 @@ app.delete("/admin/properties/:id", auth, adminOnly, async (req,res)=>{
     res.status(500).json({message:"Erreur serveur"});
   }
 });
-
 
 app.put("/admin/properties/:id", auth, adminOnly, async (req,res)=>{
   try{
@@ -1392,8 +1374,6 @@ res.status(500).json({message:"Erreur serveur"});
 
 });
 
-
-
 app.post("/admin/send-one-mail", auth, adminOnly, async (req,res)=>{
   try{
 
@@ -1414,7 +1394,6 @@ app.post("/admin/send-one-mail", auth, adminOnly, async (req,res)=>{
   }
 });
 
-
 app.put("/admin/users/:id/ban", auth, adminOnly, async (req,res)=>{
 await pool.query("UPDATE users SET banned=true WHERE id=$1",[req.params.id]);
 res.json({message:"Banned"});
@@ -1424,7 +1403,6 @@ app.put("/admin/users/:id/unban", auth, adminOnly, async (req,res)=>{
 await pool.query("UPDATE users SET banned=false WHERE id=$1",[req.params.id]);
 res.json({message:"Unbanned"});
 });
-
 
 app.get("/admin/students", auth, adminOnly, async (req, res) => {
 
@@ -1440,7 +1418,6 @@ app.get("/admin/students", auth, adminOnly, async (req, res) => {
   res.json(result.rows);
 });
 
-
 app.get("/admin/seekers", auth, adminOnly, async (req, res) => {
 
   const page = parseInt(req.query.page) || 1;
@@ -1454,8 +1431,6 @@ app.get("/admin/seekers", auth, adminOnly, async (req, res) => {
 
   res.json(result.rows);
 });
-
-
 
 app.get("/admin/stats", auth, adminOnly, async (req,res)=>{
 try{
@@ -1529,7 +1504,6 @@ app.get("/admin/search", auth, adminOnly, async (req, res) => {
    ORDER BY id DESC`,
   [q]
 );
-
   res.json(result.rows);
 });
 
