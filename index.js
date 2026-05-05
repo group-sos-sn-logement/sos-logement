@@ -86,7 +86,6 @@ const allowedOrigins = [
   "http://localhost:5501",
   "http://127.0.0.1:5502",
   "http://localhost:5000",
-  "https://sos-logement.onrender.com",
   process.env.FRONTEND_URL
 ];
 
@@ -104,26 +103,6 @@ const transporter = nodemailer.createTransport({
 
 let visitors = 0;
 
-app.use(cors({
-  origin: function (origin, callback) {
-
-    console.log("Origin:", origin); // مهم للتشخيص
-
-    if (!origin) return callback(null, true);
-
-    if (
-      origin.startsWith("http://127.0.0.1") ||
-      origin.startsWith("http://localhost") ||
-      origin.startsWith("https://dynamic-kataifi-a54e97.netlify.app") ||
-      origin === "https://sos-logement.onrender.com"
-    ) {
-      return callback(null, true);
-    }
-
-    return callback(new Error("Not allowed by CORS"));
-  },
-  credentials: true
-}));
 
 app.use((req, res, next) => {
   if (!req.headers.authorization) {
