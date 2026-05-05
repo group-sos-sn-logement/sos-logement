@@ -77,6 +77,19 @@ app.get("/", (req, res) => {
   res.send("Server is working 🚀");
 });
 
+
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+const allowedOrigins = [
+  "http://127.0.0.1:5501",
+  "http://localhost:5501",
+  "http://127.0.0.1:5502",
+  "http://localhost:5000",
+  "https://sos-logement.onrender.com",
+  process.env.FRONTEND_URL
+];
+
 app.use(helmet());
 const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
@@ -90,17 +103,6 @@ const transporter = nodemailer.createTransport({
 });
 
 let visitors = 0;
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-const allowedOrigins = [
-  "http://127.0.0.1:5501",
-  "http://localhost:5501",
-  "http://127.0.0.1:5502",
-  "http://localhost:5000",
-  "https://sos-logement.onrender.com",
-  process.env.FRONTEND_URL
-];
 
 app.use(cors({
   origin: function (origin, callback) {
