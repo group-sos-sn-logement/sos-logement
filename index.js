@@ -90,11 +90,14 @@ const allowedOrigins = [
 app.use(cors({
   origin: function (origin, callback) {
 
+    console.log("Origin:", origin); // مهم للتشخيص
+
     if (!origin) return callback(null, true);
 
     if (
       origin.startsWith("http://127.0.0.1") ||
       origin.startsWith("http://localhost") ||
+      origin === "https://dynamic-kataifi-a54e97.netlify.app" ||
       origin === "https://sos-logement.onrender.com"
     ) {
       return callback(null, true);
@@ -104,6 +107,7 @@ app.use(cors({
   },
   credentials: true
 }));
+
 
 app.use(helmet());
 const nodemailer = require("nodemailer");
