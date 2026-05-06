@@ -149,6 +149,7 @@ app.use((req, res, next) => {
   next(); // مهم! عشان يستمر الباقي من الـ routes
 });
 
+
 app.post("/contact", async (req, res) => {
   try {
     const { full_name, email, phone, subject, message, is_owner } = req.body;
@@ -178,6 +179,7 @@ app.post("/contact", async (req, res) => {
     res.status(500).json({ message: "Email failed", error: err.message });
   }
 });
+
 
 app.get("/properties", async (req, res) => {
   try {
