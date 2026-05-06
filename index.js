@@ -149,31 +149,6 @@ app.use((req, res, next) => {
   next(); // مهم! عشان يستمر الباقي من الـ routes
 });
 
-
-app.post("/contact", async (req, res) => {
-  const { full_name, email, phone, subject, message, is_owner } = req.body;
-
-  await transporter.sendMail({
-    to: "support@sossnlogement.freshdesk.com",
-    subject: `📩 Contactez-nous ${full_name}`,
-    text: `
-  Nom: ${full_name}
-  Email: ${email}
-  Téléphone: ${phone}
-
-  Sujet:
-  ${subject}
-
-  Message:
-  ${message}
-
-   ${is_owner}
-    `
-  });
-
-  res.json({ success: true });
-});
-
 app.post("/contact", async (req, res) => {
   try {
     const { full_name, email, phone, subject, message, is_owner } = req.body;
