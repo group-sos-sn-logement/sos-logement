@@ -56,7 +56,6 @@ const streamifier = require("streamifier");
 const bcrypt = require('bcrypt');
 const pool = require('./db');
 
-const router = express.Router();
 const auth = require("./middleware/auth");
 const adminOnly = (req, res, next) => {
   if (req.user.role !== "admin") {
@@ -97,7 +96,6 @@ const limiter = rateLimit({
 });
 
 
-app.set('trust proxy', 1);
 
 app.use(limiter);
 
@@ -125,10 +123,15 @@ let visitors = 0;
 
 
 app.use((req, res, next) => {
-  if (!req.headers.authorization) {
-    visitors++;
+  const safeBody = { ...req.body };
+
+  if (safeBody.password) {
+    safeBody.password = "******";
   }
-  next();
+
+  console.log("Body:", safeBody);
+
+  next(); // مهم جداً
 });
 console.log("DIR NAME:", __dirname);
 
@@ -148,6 +151,15 @@ app.use((req, res, next) => {
   console.log("=======================");
   next(); // مهم! عشان يستمر الباقي من الـ routes
 });
+
+if (process.env.NODE_ENV !== "production") {
+  app.use((req, res, next) => {
+    console.log("DEV MODE:", req.method, req.url);
+    next();
+  });
+}
+
+app.set('trust proxy', 1);
 
 
 app.post("/contact", async (req, res) => {
@@ -1482,7 +1494,17 @@ app.get("/admin/search", auth, adminOnly, async (req, res) => {
    ORDER BY id DESC`,
   [q]
 );
+
+app.use((err, req, res, next) => {
+  console.error("ERROR:", err);
+
+  res.status(500).json({
+    message: "Server error",
+    error: err.message
+  });
+});
+
   res.json(result.rows);
 });
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
