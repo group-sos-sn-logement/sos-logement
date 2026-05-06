@@ -154,7 +154,7 @@ app.post("/contact", async (req, res) => {
   try {
     const { full_name, email, phone, subject, message, is_owner } = req.body;
 
-    await transporter.sendMail({
+    await resend.emails.send({
       from: process.env.EMAIL_USER, // مهم
       to: "support@sossnlogement.freshdesk.com",
       subject: `📩 Contactez-nous ${full_name}`,
@@ -670,7 +670,7 @@ app.post("/budget-request", async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
       [first_name, last_name, email, phone, zone, house_type, budget, user_type, students_number, note]
     );
-    await transporter.sendMail({
+    await resend.emails.send({
       from: process.env.EMAIL_USER, // مهم
       to: "support@sossnlogement.freshdesk.com",
       subject: `Budget d' utilisateur  ${first_name} ${last_name}`,
@@ -716,7 +716,7 @@ app.post("/project-request", async (req, res) => {
     );
 
     // 📩 إرسال للإيميل (كما عندك)
-    await transporter.sendMail({
+    await resend.emails.send({
       from: process.env.EMAIL_USER, // مهم
       to: "support@sossnlogement.freshdesk.com",
       subject:  `🏗️ Projet d' un diaspora - ${full_name}`,
@@ -776,7 +776,7 @@ app.post("/admin/reply-diaspora", auth, adminOnly, async (req, res) => {
   try {
     const { email, message } = req.body;
 
-    await transporter.sendMail({
+    await resend.emails.send({
       to: process.env.EMAIL_USER,
       subject: "Réponse de S.O.S LOGEMENT",
       text: message
@@ -808,7 +808,7 @@ app.post("/complaints", async (req, res) => {
     );
 
     // 🔥 إرسال إلى freshdesk
-    await transporter.sendMail({
+    await resend.emails.send({
       from: process.env.EMAIL_USER, // مهم
       to: "support@sossnlogement.freshdesk.com",
       subject: `⚖️ Porteur du plainte ${first_name} ${last_name}`,
@@ -1101,7 +1101,7 @@ app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
         owner_sequence = $3
       WHERE id = $1
     `, [userId, ref, next]);
-    await transporter.sendMail({
+    await resend.emails.send({
       from: '"S.O.S LOGEMENT" <' + process.env.EMAIL_USER + '>',
       to: user.rows[0].email,
       subject: "Validation de votre compte propriétaire",
@@ -1374,7 +1374,7 @@ users = await pool.query(
 
 for(const user of users.rows){
 
-await transporter.sendMail({
+await resend.emails.send({
 from: process.env.EMAIL_USER,
 to: user.email,
 subject: "Message de l'administration",
@@ -1397,7 +1397,7 @@ app.post("/admin/send-one-mail", auth, adminOnly, async (req,res)=>{
 
     const { email, message } = req.body;
 
-    await transporter.sendMail({
+    await resend.emails.send({
       from: process.env.EMAIL_USER,
       to: email,
       subject: "Message de l'administration",
