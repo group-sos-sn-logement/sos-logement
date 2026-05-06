@@ -167,11 +167,41 @@ app.post("/contact", async (req, res) => {
   Message:
   ${message}
 
-  Est-ce qu' il est bailleur ? : ${is_owner}
+   ${is_owner}
     `
   });
 
   res.json({ success: true });
+});
+
+app.post("/contact", async (req, res) => {
+  try {
+    const { full_name, email, phone, subject, message, is_owner } = req.body;
+
+    await transporter.sendMail({
+      to: "support@sossnlogement.freshdesk.com",
+      subject: `📩 Contactez-nous ${full_name}`,
+      text: `
+      Nom: ${full_name}
+      Email: ${email}
+      Téléphone: ${phone}
+
+      Sujet:
+      ${subject}
+
+      Message:
+      ${message}
+
+      Est-ce qu' il est bailleur ? : ${is_owner}
+            `
+    });
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("MAIL ERROR:", err);
+    res.status(500).json({ message: "Email failed", error: err.message });
+  }
 });
 
 app.get("/properties", async (req, res) => {
