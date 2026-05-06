@@ -174,9 +174,6 @@ app.post("/contact", async (req, res) => {
   res.json({ success: true });
 });
 
-
-app.use("/", router);
-
 app.get("/properties", async (req, res) => {
   try {
 
@@ -565,24 +562,6 @@ app.post("/owner-request-public", async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6)`,
       [first_name, last_name, email, phone, conditions, commission]
     );
-
-    // أو فقط تبعث email
-    /*
-    await transporter.sendMail({
-      to: "support@sossnlogement.freshdesk.com",
-      subject: "Nouvelle demande propriétaire (non inscrit)",
-      text: `
-      Nom: ${first_name} ${last_name}
-      Email: ${email}
-      Téléphone: ${phone}
-
-      Conditions:
-      ${conditions}
-
-      Commission: ${commission}
-            `
-          });
-          */
 
     res.json({ message: "Demande envoyée (public) ✅" });
 
@@ -1495,6 +1474,5 @@ app.get("/admin/search", auth, adminOnly, async (req, res) => {
 );
   res.json(result.rows);
 });
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+const PORT = process.env.PORT;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
