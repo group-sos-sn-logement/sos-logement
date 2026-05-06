@@ -104,23 +104,11 @@ app.get("/", (req, res) => {
   res.send("Server is working 🚀");
 });
 
+const { Resend } = require("resend");
 
-
-const nodemailer = require("nodemailer");
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587, // 👈 مهم بدل 465
-  secure: false, // 👈 مهم
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 let visitors = 0;
-
-
-
 
 app.use((req, res, next) => {
   const safeBody = { ...req.body };
@@ -789,7 +777,7 @@ app.post("/admin/reply-diaspora", auth, adminOnly, async (req, res) => {
     const { email, message } = req.body;
 
     await transporter.sendMail({
-      to: email,
+      to: process.env.EMAIL_USER,
       subject: "Réponse de S.O.S LOGEMENT",
       text: message
     });
@@ -1118,11 +1106,52 @@ app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
       to: user.rows[0].email,
       subject: "Validation de votre compte propriétaire",
       html: `
-        <h2>Félicitations !</h2>
-        <p>Votre référence: <b>${ref}</b></p>
+      <div style="font-family: Arial, sans-serif; background-color:#f6f6f6; padding:20px;">
+        <div style="max-width:600px; margin:auto; background:#ffffff; border-radius:8px; padding:30px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+          
+          <h2 style="color:#2c3e50; text-align:center;">
+            Validation de votre compte propriétaire
+          </h2>
+
+          <p style="color:#333; font-size:15px;">
+            Bonjour,
+          </p>
+
+          <p style="color:#333; font-size:15px;">
+            Nous avons le plaisir de vous informer que votre demande de création de compte 
+            <strong>propriétaire</strong> sur la plateforme <strong>sos.logement.com</strong> a été 
+            <span style="color:green; font-weight:bold;">validée avec succès</span>.
+          </p>
+
+          <p style="color:#333; font-size:15px;">
+            Votre référence propriétaire est la suivante :
+          </p>
+
+          <div style="text-align:center; margin:20px 0;">
+            <span style="display:inline-block; background:#f1f1f1; padding:10px 20px; border-radius:6px; font-size:18px; font-weight:bold; color:#2c3e50;">
+              ${ref}
+            </span>
+          </div>
+
+          <p style="color:#333; font-size:15px;">
+            Nous vous invitons à conserver cette référence précieusement, elle pourra vous être demandée lors de vos futures démarches.
+          </p>
+
+          <p style="color:#333; font-size:15px;">
+            Vous pouvez désormais accéder à votre espace et publier vos biens en toute sécurité.
+          </p>
+
+          <hr style="border:none; border-top:1px solid #eee; margin:25px 0;">
+
+          <p style="color:#777; font-size:13px; text-align:center;">
+            Cet email est généré automatiquement, merci de ne pas y répondre.<br>
+            © ${new Date().getFullYear()} S.O.S LOGEMENT — Tous droits réservés
+          </p>
+
+        </div>
+      </div>
       `
     });
-
     res.json({ message: "Propriétaire approuvé", reference: ref });
 
   } catch (err) {
