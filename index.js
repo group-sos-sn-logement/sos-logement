@@ -155,21 +155,22 @@ app.post("/contact", async (req, res) => {
     const { full_name, email, phone, subject, message, is_owner } = req.body;
 
     await transporter.sendMail({
+      from: process.env.EMAIL_USER, // مهم
       to: "support@sossnlogement.freshdesk.com",
       subject: `📩 Contactez-nous ${full_name}`,
       text: `
-      Nom: ${full_name}
-      Email: ${email}
-      Téléphone: ${phone}
+Nom: ${full_name}
+Email: ${email}
+Téléphone: ${phone}
 
-      Sujet:
-      ${subject}
+Sujet:
+${subject}
 
-      Message:
-      ${message}
+Message:
+${message}
 
-      Est-ce qu' il est bailleur ? : ${is_owner}
-            `
+Bailleur: ${is_owner}
+      `
     });
 
     res.json({ success: true });
@@ -179,7 +180,6 @@ app.post("/contact", async (req, res) => {
     res.status(500).json({ message: "Email failed", error: err.message });
   }
 });
-
 
 app.get("/properties", async (req, res) => {
   try {
@@ -671,9 +671,10 @@ app.post("/budget-request", async (req, res) => {
       [first_name, last_name, email, phone, zone, house_type, budget, user_type, students_number, note]
     );
     await transporter.sendMail({
-        to:"support@sossnlogement.freshdesk.com",
-        subject: `Budget d' utilisateur  ${first_name} ${last_name}`,
-        text: `
+      from: process.env.EMAIL_USER, // مهم
+      to: "support@sossnlogement.freshdesk.com",
+      subject: `Budget d' utilisateur  ${first_name} ${last_name}`,
+      text: `
       Zone: ${zone}
       Type: ${house_type}
       Budget: ${budget}
@@ -716,8 +717,9 @@ app.post("/project-request", async (req, res) => {
 
     // 📩 إرسال للإيميل (كما عندك)
     await transporter.sendMail({
+      from: process.env.EMAIL_USER, // مهم
       to: "support@sossnlogement.freshdesk.com",
-      subject: `🏗️ Projet extérieur - ${full_name}`,
+      subject:  `🏗️ Projet d' un diaspora - ${full_name}`,
       text: `
       Nom: ${full_name}
       Email: ${email}
@@ -807,8 +809,9 @@ app.post("/complaints", async (req, res) => {
 
     // 🔥 إرسال إلى freshdesk
     await transporter.sendMail({
-      to: "support@sossnlogement.freshdesk.com", // ← غيّر هذا
-      subject: ` ⚖️ Porteur du plainte ${first_name} ${last_name}`,
+      from: process.env.EMAIL_USER, // مهم
+      to: "support@sossnlogement.freshdesk.com",
+      subject: `⚖️ Porteur du plainte ${first_name} ${last_name}`,
       text: `
     Nom: ${first_name} ${last_name}
     Email: ${email}
