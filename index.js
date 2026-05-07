@@ -29,7 +29,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 console.log("CLOUD NAME:", process.env.CLOUDINARY_CLOUD_NAME);
+const cookieParser = require("cookie-parser");
 
+app.use(cookieParser());
 
 
 
@@ -212,6 +214,7 @@ app.get("/properties", async (req, res) => {
 });
 app.get("/property/:code", async (req, res) => {
   try {
+    console.log("CODE RECEIVED:", req.params.code);
     const result = await pool.query(`
       SELECT p.*, 
       ARRAY(
@@ -599,15 +602,34 @@ app.post("/login", async (req, res) => {
       return res.status(403).json({message:"Compte bloqué"});
     }
 
-    const token = jwt.sign(
+        const accessToken = jwt.sign(
       { id: user.id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "15m" } // قصير
+      { expiresIn: "15m" }
     );
 
+    const refreshToken = jwt.sign(
+      { id: user.id },
+      process.env.REFRESH_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // 🔥 نحفظه في DB (مهم للتحكم)
+    await pool.query(
+      "UPDATE users SET refresh_token = $1 WHERE id = $2",
+      [refreshToken, user.id]
+    );
+
+    // 🍪 نحطه في cookie
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: true, // في production HTTPS
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
     res.json({
-      message: "Connexion réussie",
-      token
+      accessToken
     });
 
 
@@ -615,6 +637,51 @@ app.post("/login", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
+});
+app.post("/refresh-token", async (req, res) => {
+  const token = req.cookies.refreshToken;
+
+  if (!token) {
+    return res.status(401).json({ message: "No refresh token" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.REFRESH_SECRET);
+
+    // 🔥 تحقق أنه موجود في DB (مهم جدًا)
+    const userRes = await pool.query(
+      "SELECT refresh_token FROM users WHERE id=$1",
+      [decoded.id]
+    );
+
+    if (userRes.rows.length === 0 || userRes.rows[0].refresh_token !== token) {
+      return res.status(403).json({ message: "Invalid refresh token" });
+    }
+
+    const newAccessToken = jwt.sign(
+      { id: decoded.id },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    res.json({ accessToken: newAccessToken });
+
+  } catch (err) {
+    return res.status(403).json({ message: "Invalid token" });
+  }
+});
+app.post("/logout", auth, async (req, res) => {
+
+  // حذف من DB
+  await pool.query(
+    "UPDATE users SET refresh_token = NULL WHERE id=$1",
+    [req.user.id]
+  );
+
+  // حذف cookie
+  res.clearCookie("refreshToken");
+
+  res.json({ message: "Logged out" });
 });
 
 app.post("/logout", auth, async (req,res)=>{
@@ -1502,35 +1569,134 @@ res.status(500).json({message:"Erreur serveur"});
 });
 
 app.get("/admin/search", auth, adminOnly, async (req, res) => {
-  const q = req.query.q?.replace(/\s/g, "").toLowerCase();
+  try {
 
-  if (!q) return res.json([]);
+    const q = req.query.q?.trim();
 
-  const result = await pool.query(
-  `SELECT id, first_name, last_name, email, role, banned, owner_ref
-   FROM users
-   WHERE
-   to_tsvector('simple',
-     COALESCE(first_name,'') || ' ' ||
-     COALESCE(last_name,'') || ' ' ||
-     COALESCE(email,'') || ' ' ||
-     COALESCE(owner_ref,'')
-   )
-   @@ plainto_tsquery('simple', $1)
-   ORDER BY id DESC`,
-  [q]
-);
+    console.log("SEARCH QUERY:", q);
+    console.log("CODE RECEIVED:", req.params.code);
 
-app.use((err, req, res, next) => {
-  console.error("ERROR:", err);
 
-  res.status(500).json({
-    message: "Server error",
-    error: err.message
-  });
+    if (!q) {
+      return res.json([]);
+    }
+
+    const search = `%${q}%`;
+
+    // ================= USERS =================
+    const users = await pool.query(`
+      SELECT
+        'user' AS type,
+        id,
+        first_name,
+        last_name,
+        email,
+        role,
+        owner_ref
+      FROM users
+      WHERE
+        LOWER(COALESCE(first_name,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(last_name,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(email,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(owner_ref,'')) LIKE LOWER($1)
+    `, [search]);
+
+    // ================= PROPERTIES =================
+    const properties = await pool.query(`
+      SELECT
+        'property' AS type,
+        p.id,
+        p.property_code,
+        p.title,
+        p.city,
+        p.status,
+        p.price,
+        u.first_name,
+        u.last_name,
+        u.owner_ref
+      FROM properties p
+      JOIN users u ON p.owner_id = u.id
+      WHERE
+        LOWER(COALESCE(p.property_code,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(p.title,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(p.city,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(u.owner_ref,'')) LIKE LOWER($1)
+    `, [search]);
+
+    // ================= DIASPORA =================
+    const diaspora = await pool.query(`
+      SELECT
+        'diaspora' AS type,
+        id,
+        full_name,
+        email,
+        phone,
+        country,
+        project_type
+      FROM diaspora_requests
+      WHERE
+        LOWER(COALESCE(full_name,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(email,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(phone,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(country,'')) LIKE LOWER($1)
+    `, [search]);
+
+    // ================= BUDGET =================
+    const budgets = await pool.query(`
+      SELECT
+        'budget' AS type,
+        id,
+        first_name,
+        last_name,
+        email,
+        phone,
+        zone,
+        budget
+      FROM budget_requests
+      WHERE
+        LOWER(COALESCE(first_name,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(last_name,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(email,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(phone,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(zone,'')) LIKE LOWER($1)
+    `, [search]);
+
+    // ================= COMPLAINTS =================
+    const complaints = await pool.query(`
+      SELECT
+        'complaint' AS type,
+        id,
+        first_name,
+        last_name,
+        email,
+        tel,
+        house_name,
+        house_location
+      FROM complaints
+      WHERE
+        LOWER(COALESCE(first_name,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(last_name,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(email,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(tel,'')) LIKE LOWER($1)
+        OR LOWER(COALESCE(house_name,'')) LIKE LOWER($1)
+    `, [search]);
+
+    // دمج جميع النتائج
+    const results = [
+      ...users.rows,
+      ...properties.rows,
+      ...diaspora.rows,
+      ...budgets.rows,
+      ...complaints.rows
+    ];
+
+    res.json(results);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
-  res.json(result.rows);
-});
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

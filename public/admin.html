@@ -523,13 +523,16 @@
       container.innerHTML += `
         <div class="card">
           <h3>${p.title}</h3>
-          <p><b>${p.city}</b> - ${p.price} FCFA</p>
+          <p><b>${p.city}</b></p> 
+          <p><strong>Localisation exacte :</strong> ${p.exact_location}</p>
+          <p><b>${p.price} FCFA</b></p>
 
           <hr>
 
           <p>👤 Nom: ${p.first_name + " " + p.last_name}</p>
           <p>📞 Téléphone: ${p.phone || "N/A"}</p>
           <p>🆔 Référence owner: ${p.owner_ref || "N/A"}</p>
+          <p>🏠 Référence bien: ${p.property_code || "N/A"}</p>
 
           <button onclick="editProperty(${p.id})">✏️ Edit</button>
           <button onclick="hideProperty(${p.id})">Hide</button>
