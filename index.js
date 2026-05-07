@@ -189,14 +189,14 @@ app.get("/properties", async (req, res) => {
         u.last_name,
         u.phone,
         u.owner_ref,
-        ARRAY(
-          SELECT json_build_object(
-            'id', id,
-            'url', image_url
-          )
+
+        (
+          SELECT image_url
           FROM property_images
           WHERE property_id = p.id
-        ) AS images
+          LIMIT 1
+        ) AS cover_image
+
       FROM properties p
       JOIN users u ON p.owner_id = u.id
       WHERE p.status = 'approved'
@@ -207,10 +207,9 @@ app.get("/properties", async (req, res) => {
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Erreur /properties, async (req, res" });
+    res.status(500).json({ message: "Erreur serveur" });
   }
 });
-
 app.get("/property/:code", async (req, res) => {
   try {
     const result = await pool.query(`
