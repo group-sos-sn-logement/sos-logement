@@ -185,25 +185,33 @@ app.get("/properties", async (req, res) => {
   try {
 
     const result = await pool.query(`
-      SELECT 
-        p.*,
-        u.first_name,
-        u.last_name,
-        u.phone,
-        u.owner_ref,
+    SELECT
+      p.property_code,
+      p.title,
+      p.type,
+      p.description,
+      p.city,
+      p.price,
+      p.chambres,
+      p.cuisine,
+      p.sdb,
+      p.salon,
+      p.is_student,
+      p.max_students,
 
-        (
-          SELECT image_url
-          FROM property_images
-          WHERE property_id = p.id
-          LIMIT 1
-        ) AS cover_image
+      ARRAY(
+        SELECT json_build_object(
+          'url', image_url,
+          'type', type
+        )
+        FROM property_images
+        WHERE property_id = p.id
+      ) AS images
 
-      FROM properties p
-      JOIN users u ON p.owner_id = u.id
-      WHERE p.status = 'approved'
-      ORDER BY p.id DESC
-    `);
+    FROM properties p
+    WHERE p.status = 'approved'
+    ORDER BY p.id DESC
+  `);
 
     res.json(result.rows);
 
@@ -212,6 +220,7 @@ app.get("/properties", async (req, res) => {
     res.status(500).json({ message: "Erreur serveur" });
   }
 });
+
 app.get("/property/:code", async (req, res) => {
   try {
     console.log("CODE RECEIVED:", req.params.code);
