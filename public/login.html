@@ -63,20 +63,40 @@
 
     <script>
     function login() {
-      fetch("https://sos-logement.onrender.com/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.value,
-          password: password.value
-        })
+
+    fetch("https://sos-logement.onrender.com/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email: email.value,
+        password: password.value
       })
-      .then(res => res.json())
-      .then(data => {
-        localStorage.setItem("token", data.token);
-        window.location.href = "admin.html";
-      });
-    }
+    })
+
+    .then(res => res.json())
+
+    .then(data => {
+
+      console.log("LOGIN RESPONSE =", data);
+
+      // 👇 مهم جدا
+      if (!data.token) {
+        alert(data.message || "Login failed");
+        return;
+      }
+
+      localStorage.setItem("token", data.token);
+
+      window.location.href = "admin.html";
+    })
+
+    .catch(err => {
+      console.error(err);
+      alert("Erreur serveur");
+    });
+  }
     </script>
 
   </body>
