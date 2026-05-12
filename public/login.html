@@ -86,12 +86,12 @@
             return;
           }
 
-          if (!data.token) {
+          if (!data.accessToken) {
             alert("No token received");
             return;
           }
 
-          localStorage.setItem("token", data.token);
+          localStorage.setItem("token", data.accessToken);
 
           alert("Login success ✅");
 
