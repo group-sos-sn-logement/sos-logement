@@ -62,42 +62,49 @@
 
 
     <script>
-    function login() {
+      async function login() {
 
-    fetch("https://sos-logement.onrender.com/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        email: email.value,
-        password: password.value
-      })
-    })
+        try {
 
-    .then(res => res.json())
+          const res = await fetch("https://sos-logement.onrender.com/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              email: document.getElementById("email").value,
+              password: document.getElementById("password").value
+            })
+          });
 
-    .then(data => {
+          const data = await res.json();
 
-      console.log("LOGIN RESPONSE =", data);
+          console.log(data);
 
-      // 👇 مهم جدا
-      if (!data.token) {
-        alert(data.message || "Login failed");
-        return;
+          if (!res.ok) {
+            alert(data.message || "Login failed");
+            return;
+          }
+
+          if (!data.token) {
+            alert("No token received");
+            return;
+          }
+
+          localStorage.setItem("token", data.token);
+
+          alert("Login success ✅");
+
+          window.location.href = "admin.html";
+
+        } catch(err) {
+
+          console.error(err);
+          alert("Server error");
+
+        }
       }
-
-      localStorage.setItem("token", data.token);
-
-      window.location.href = "admin.html";
-    })
-
-    .catch(err => {
-      console.error(err);
-      alert("Erreur serveur");
-    });
-  }
-    </script>
+      </script>
 
   </body>
 </html>
