@@ -600,23 +600,32 @@ app.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Email ou mot de passe incorrect" });
     }
 
+    
+
     const user = userRes.rows[0];
 
     const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) {
-      return res.status(400).json({ message: "Email ou mot de passe incorrect" });
+      return res.status(400).json({
+        message: "Email ou mot de passe incorrect"
+      });
     }
 
-    if(user.banned){
-      return res.status(403).json({message:"Compte bloqué"});
+    if (user.banned) {
+      return res.status(403).json({
+        message: "Compte bloqué"
+      });
     }
 
-        const accessToken = jwt.sign(
-      { id: user.id, role: user.role },
+    const accessToken = jwt.sign(
+      {
+        id: user.id,
+        role: user.role
+      },
       process.env.JWT_SECRET,
       { expiresIn: "15m" }
     );
-
     const refreshToken = jwt.sign(
       { id: user.id },
       process.env.REFRESH_SECRET,
