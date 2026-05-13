@@ -383,18 +383,40 @@ if (user.role !== "owner" || user.approved !== true) {
 
 const streamUpload = (fileBuffer) => {
   return new Promise((resolve, reject) => {
+
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: "sos-logement",
-        resource_type: "auto"
+
+        resource_type: "auto",
+
+        // ضغط ذكي
+        quality: "auto:good",
+
+        // WebP / AVIF تلقائي
+        fetch_format: "auto",
+
+        // تصغير الصور الكبيرة
+        transformation: [
+          {
+            width: 1200,
+            height: 800,
+            crop: "limit",
+            quality: "auto:good",
+            fetch_format: "auto",
+            flags: "progressive"
+          }
+        ]
       },
+
       (error, result) => {
-        if (result) resolve(result);
-        else reject(error);
+        if (error) reject(error);
+        else resolve(result);
       }
     );
 
     streamifier.createReadStream(fileBuffer).pipe(stream);
+
   });
 };
 
