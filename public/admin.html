@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>Admin Dashboard</title>
     <link rel="icon" href="SOS-LOGEMENT-01.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#111827">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
       body {
@@ -1031,6 +1033,16 @@
       showSection("diasporaSection");
       loadDiasporaMessages();
     }
+
+    </script>
+    <script>
+
+      // كل كودك الحالي هنا ...
+
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js")
+          .then(() => console.log("SW Registered"));
+      }
 
     </script>
 

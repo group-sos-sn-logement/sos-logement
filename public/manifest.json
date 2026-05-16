@@ -1,0 +1,21 @@
+{
+  "name": "SOS.LOGEMENT",
+  "short_name": "sos.logement",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#111827",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "S.O.S-LOGEMENT.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "SOS-LOGEMENT-01.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

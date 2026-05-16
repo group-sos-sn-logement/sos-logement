@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8">
     <title>Login</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#111827">
     <link rel="icon" href="SOS-LOGEMENT-01.png">
 
     <style> 
@@ -104,6 +106,16 @@
 
         }
       }
+      </script>
+      <script>
+
+        // كل كودك الحالي هنا ...
+
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.register("/sw.js")
+            .then(() => console.log("SW Registered"));
+        }
+
       </script>
 
   </body>
