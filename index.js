@@ -41,7 +41,7 @@ const path = require("path");
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
 const { body, validationResult } = require("express-validator");
@@ -101,14 +101,7 @@ const limiter = rateLimit({
   max: 100
 });
 
-
-
 app.use(limiter);
-
-
-app.get("/", (req, res) => {
-  res.send("Server is working 🚀");
-});
 
 const { Resend } = require("resend");
 
