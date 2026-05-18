@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">sos.logement</string>
+    <string name="title_activity_main">sos.logement</string>
+    <string name="package_name">com.sos.logement.app</string>
+    <string name="custom_url_scheme">com.sos.logement.app</string>
+</resources>
