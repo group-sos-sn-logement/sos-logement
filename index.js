@@ -417,7 +417,7 @@ const streamUpload = (fileBuffer) => {
   });
 };
 
-app.post("/properties/:id/images", auth, upload.array("media", 10), async (req, res) => {
+app.post("/properties/:id/images", auth, async (req, res) => {
   try {
 
       console.log("FILES:", req.files);
@@ -1323,7 +1323,9 @@ app.delete("/admin/images/:id", auth, adminOnly, async (req,res)=>{
 
     // 1️⃣ نجيب الصورة
     const result = await pool.query(`
-      SELECT property_images.public_id, properties.owner_id
+      SELECT property_images.public_id,
+       property_images.type,
+       properties.owner_id
       FROM property_images
       JOIN properties ON property_images.property_id = properties.id
       WHERE property_images.id = $1
