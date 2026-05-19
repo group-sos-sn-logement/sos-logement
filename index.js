@@ -77,7 +77,7 @@ const multer = require("multer");
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
   fileFilter: (req, file, cb) => {
     if (
       file.mimetype.startsWith("image/") ||
@@ -199,13 +199,11 @@ app.get("/properties", async (req, res) => {
       p.max_students,
 
       ARRAY(
-        SELECT json_build_object(
-          'url', image_url,
-          'type', type
-        )
+        SELECT image_url
         FROM property_images
         WHERE property_id = p.id
-      ) AS images
+        LIMIT 1
+      ) AS cover_image
 
     FROM properties p
     WHERE p.status = 'approved'
@@ -429,13 +427,23 @@ app.post("/properties/:id/images", auth, upload.array("media", 10), async (req, 
 
     // 🔥 1. جلب الصور القديمة
     const oldImages = await pool.query(
-      "SELECT public_id FROM property_images WHERE property_id=$1",
+      "SELECT public_id, type FROM property_images WHERE property_id=$1",
       [propertyId]
     );
 
     // 🔥 2. حذفها من Cloudinary
     for (const img of oldImages.rows) {
-      await cloudinary.uploader.destroy(img.public_id);
+
+      await cloudinary.uploader.destroy(
+        img.public_id,
+        {
+          resource_type:
+            img.type === "video"
+              ? "video"
+              : "image"
+        }
+      );
+
     }
 
     // 🔥 3. حذفها من DB
@@ -446,19 +454,64 @@ app.post("/properties/:id/images", auth, upload.array("media", 10), async (req, 
 
     // 🔥 4. رفع الصور الجديدة
     for (const file of req.files) {
-      const result = await streamUpload(file.buffer);
+
+      const result = await new Promise((resolve, reject) => {
+
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "sos-logement",
+
+            resource_type: "auto",
+
+            quality: "auto:good",
+
+            fetch_format: "auto",
+
+            transformation: file.mimetype.startsWith("image/")
+              ? [
+                  {
+                    width: 1200,
+                    height: 800,
+                    crop: "limit",
+                    quality: "auto:good",
+                    fetch_format: "auto",
+                    flags: "progressive"
+                  }
+                ]
+              : []
+          },
+
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+
+        streamifier
+          .createReadStream(file.buffer)
+          .pipe(stream);
+
+      });
 
       await pool.query(
-        "INSERT INTO property_images (property_id, image_url, public_id, type) VALUES ($1,$2,$3,$4)",
-        [propertyId, result.secure_url, result.public_id, result.resource_type]
+        `INSERT INTO property_images 
+        (property_id, image_url, public_id, type)
+        VALUES ($1,$2,$3,$4)`,
+
+        [
+          propertyId,
+          result.secure_url,
+          result.public_id,
+          result.resource_type
+        ]
       );
-    }
+  }
 
-    res.json({ message: "Images replaced ✅" });
+  res.json({ message: "Images replaced ✅" });
 
-  } catch (err) {
-    console.error("UPLOAD ERROR FULL:", err);
-    res.status(500).json({ message: "Erreur serveur" });
+    } catch (err) {
+      console.error("UPLOAD ERROR FULL:", err);
+      res.status(500).json({ message: "Erreur serveur" });
   }
 });
 
@@ -697,8 +750,16 @@ app.post("/refresh-token", async (req, res) => {
       return res.status(403).json({ message: "Invalid refresh token" });
     }
 
+    const user = await pool.query(
+      "SELECT role FROM users WHERE id=$1",
+      [decoded.id]
+    );
+
     const newAccessToken = jwt.sign(
-      { id: decoded.id },
+      {
+        id: decoded.id,
+        role: user.rows[0].role
+      },
       process.env.JWT_SECRET,
       { expiresIn: "15m" }
     );
@@ -708,29 +769,23 @@ app.post("/refresh-token", async (req, res) => {
   } catch (err) {
     return res.status(403).json({ message: "Invalid token" });
   }
-});
-app.post("/logout", auth, async (req, res) => {
-
-  // حذف من DB
-  await pool.query(
-    "UPDATE users SET refresh_token = NULL WHERE id=$1",
-    [req.user.id]
-  );
-
-  // حذف cookie
-  res.clearCookie("refreshToken");
-
-  res.json({ message: "Logged out" });
-});
+});   
 
 app.post("/logout", auth, async (req,res)=>{
   try{
+
     await pool.query(
-      "UPDATE users SET last_logout = NOW() WHERE id = $1",
+      `UPDATE users
+       SET refresh_token = NULL,
+           last_logout = NOW()
+       WHERE id=$1`,
       [req.user.id]
     );
 
+    res.clearCookie("refreshToken");
+
     res.json({message:"Logged out"});
+
   }catch(err){
     console.error(err);
     res.status(500).json({message:"Erreur serveur"});
@@ -1286,7 +1341,15 @@ app.delete("/admin/images/:id", auth, adminOnly, async (req,res)=>{
     const public_id = result.rows[0].public_id;
 
     // 2️⃣ نحذف من Cloudinary
-    await cloudinary.uploader.destroy(public_id);
+    await cloudinary.uploader.destroy(
+      public_id,
+      {
+        resource_type:
+          result.rows[0].type === "video"
+            ? "video"
+            : "image"
+      }
+    );
 
     // 3️⃣ نحذف من DB
     await pool.query(
@@ -1388,12 +1451,22 @@ app.delete("/admin/properties/:id", auth, adminOnly, async (req,res)=>{
   try{
 
     const images = await pool.query(
-      "SELECT public_id FROM property_images WHERE property_id=$1",
+      "SELECT public_id, type FROM property_images WHERE property_id=$1",
       [req.params.id]
     );
 
-    for(const img of images.rows){
-      await cloudinary.uploader.destroy(img.public_id);
+    for (const img of images.rows) {
+
+      await cloudinary.uploader.destroy(
+        img.public_id,
+        {
+          resource_type:
+            img.type === "video"
+              ? "video"
+              : "image"
+        }
+      );
+
     }
 
     await pool.query("DELETE FROM properties WHERE id=$1",[req.params.id]);
@@ -1428,12 +1501,22 @@ app.post("/admin/properties/:id/images", auth, adminOnly, upload.array("media", 
     const propertyId = req.params.id;
 
     const oldImages = await pool.query(
-      "SELECT public_id FROM property_images WHERE property_id=$1",
+      "SELECT public_id, type FROM property_images WHERE property_id=$1",
       [propertyId]
     );
 
     for (const img of oldImages.rows) {
-      await cloudinary.uploader.destroy(img.public_id);
+
+      await cloudinary.uploader.destroy(
+        img.public_id,
+        {
+          resource_type:
+            img.type === "video"
+              ? "video"
+              : "image"
+        }
+      );
+
     }
 
     await pool.query(
