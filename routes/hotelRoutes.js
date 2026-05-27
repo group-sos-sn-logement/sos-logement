@@ -17,8 +17,7 @@ module.exports = router;
 const hotelController =
 require("../controllers/hotelController");
 
-const auth =
-require("../middleware/auth");
+
 
 const adminOnly =
 require("../middleware/adminOnly");
@@ -30,7 +29,7 @@ require("../middleware/adminOnly");
 // ===============================
 
 router.post(
-    "/hotels",
+    "/",
     auth,
     hotelController.createHotel
 );
@@ -42,7 +41,7 @@ router.post(
 // ===============================
 
 router.post(
-    "/hotels/:id/images",
+    "/:id/images",
     auth,
     hotelController.addHotelImages
 );
@@ -54,7 +53,7 @@ router.post(
 // ===============================
 
 router.post(
-    "/hotels/:id/logo",
+    "/:id/logo",
     auth,
     hotelController.addHotelLogo
 );
@@ -66,7 +65,7 @@ router.post(
 // ===============================
 
 router.get(
-    "/hotels",
+    "/",
     hotelController.getApprovedHotels
 );
 
