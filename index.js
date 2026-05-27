@@ -1864,7 +1864,7 @@ app.get("/admin/search", auth, adminOnly, async (req, res) => {
 /* =========================
    ADD HOTEL
 ========================= */
-app.post("/hotels", authMiddleware, async (req, res) => {
+app.post("/hotels", auth, async (req, res) => {
 
     try {
 
@@ -2011,7 +2011,7 @@ app.post("/hotels", authMiddleware, async (req, res) => {
 
 });
 
-app.post("/hotels/:id/images", authMiddleware, async (req,res)=>{
+app.post("/hotels/:id/images", auth, async (req,res)=>{
 
     try{
 
@@ -2059,49 +2059,8 @@ app.post("/hotels/:id/images", authMiddleware, async (req,res)=>{
 
 });
 
-app.post("/hotels/:id/logo", authMiddleware, async (req,res)=>{
 
-    try{
-
-        const hotelId = req.params.id;
-
-        const {
-            logo_url,
-            logo_public_id
-        } = req.body;
-
-        await pool.query(
-            `
-            UPDATE hotels
-            SET
-            logo_url = $1,
-            logo_public_id = $2
-            WHERE id = $3
-            `,
-            [
-                logo_url,
-                logo_public_id,
-                hotelId
-            ]
-        );
-
-        res.json({
-            message:"Logo updated"
-        });
-
-    }
-
-    catch(err){
-
-        console.error(err);
-
-        res.status(500).json({
-            message:"Erreur serveur"
-        });
-
-    }
-
-});app.post("/hotels/:id/logo", authMiddleware, async (req,res)=>{
+app.post("/hotels/:id/logo", auth, async (req,res)=>{
 
     try{
 
@@ -2145,7 +2104,7 @@ app.post("/hotels/:id/logo", authMiddleware, async (req,res)=>{
 
 });
 
-app.get("/admin/hotels", authMiddleware, adminOnly, async(req,res)=>{
+app.get("/admin/hotels", auth, adminOnly, async(req,res)=>{
 
     const result = await pool.query(
         `
@@ -2169,7 +2128,7 @@ app.get("/admin/hotels", authMiddleware, adminOnly, async(req,res)=>{
 });
 
 app.put("/admin/hotels/:id/approve",
-authMiddleware,
+auth,
 adminOnly,
 async(req,res)=>{
 
@@ -2189,7 +2148,7 @@ async(req,res)=>{
 });
 
 app.put("/admin/hotels/:id/hide",
-authMiddleware,
+auth,
 adminOnly,
 async(req,res)=>{
 
@@ -2209,7 +2168,7 @@ async(req,res)=>{
 });
 
 app.put("/admin/hotels/:id/hide",
-authMiddleware,
+auth,
 adminOnly,
 async(req,res)=>{
 
