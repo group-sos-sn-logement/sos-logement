@@ -1,5 +1,6 @@
 const express = require("express");
 const app = express();
+const hotelRoutes = require("./routes/hotelRoutes");
 
 require("dotenv").config();
 
@@ -147,8 +148,46 @@ if (process.env.NODE_ENV !== "production") {
   });
 }
 
-app.set('trust proxy', 1);
 
+async function generateGlobalPropertyCode(userId){
+
+    // نأتي بمرجع المالك
+    const userRes = await pool.query(
+        `SELECT owner_ref FROM users WHERE id = $1`,
+        [userId]
+    );
+
+    const ownerRef = userRes.rows[0].owner_ref;
+
+    // نحسب عدد جميع العروض
+    const propertiesCount = await pool.query(
+        `SELECT COUNT(*) FROM properties WHERE user_id = $1`,
+        [userId]
+    );
+
+    const hotelsCount = await pool.query(
+        `SELECT COUNT(*) FROM hotels WHERE user_id = $1`,
+        [userId]
+    );
+
+    // مستقبلا:
+    // cars
+    // lands
+    // etc
+
+    const total =
+        parseInt(propertiesCount.rows[0].count)
+        +
+        parseInt(hotelsCount.rows[0].count);
+
+    const sequence =
+        String(total + 1).padStart(3, "0");
+
+    return `${ownerRef}-${sequence}`;
+}
+
+app.set('trust proxy', 1);
+app.use("/hotels", hotelRoutes);
 
 app.post("/contact", async (req, res) => {
   try {
@@ -1821,6 +1860,372 @@ app.get("/admin/search", auth, adminOnly, async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
+});
+/* =========================
+   ADD HOTEL
+========================= */
+app.post("/hotels", authMiddleware, async (req, res) => {
+
+    try {
+
+        const userId = req.user.id;
+
+        const hotelCode =
+        await generateGlobalPropertyCode(userId);
+
+        const {
+            hotel_name,
+            hotel_type,
+            city_region,
+            full_address,
+            google_maps,
+            hotel_phone,
+            hotel_email,
+            description_hotel,
+            checkin,
+            checkout,
+            familles_groupes,
+            max_personnes,
+            rooms_services,
+            hotel_services,
+            reception,
+            payment_methods,
+            choses_interdites,
+            extra_rules,
+            proche_de,
+            nearby_places,
+            rooms
+        } = req.body;
+
+        const result = await pool.query(
+            `
+            INSERT INTO hotels (
+
+                user_id,
+                hotel_code,
+
+                hotel_name,
+                hotel_type,
+
+                city_region,
+                full_address,
+                google_maps,
+
+                hotel_phone,
+                hotel_email,
+
+                description_hotel,
+
+                checkin,
+                checkout,
+
+                familles_groupes,
+                max_personnes,
+
+                rooms_services,
+                hotel_services,
+
+                reception,
+
+                payment_methods,
+
+                choses_interdites,
+
+                extra_rules,
+
+                proche_de,
+                nearby_places,
+
+                rooms
+
+            )
+
+            VALUES (
+
+                $1,$2,$3,$4,$5,$6,$7,
+                $8,$9,$10,$11,$12,
+                $13,$14,$15,$16,
+                $17,$18,$19,$20,
+                $21,$22,$23
+
+            )
+
+            RETURNING *
+            `,
+            [
+                userId,
+                hotelCode,
+
+                hotel_name,
+                hotel_type,
+
+                city_region,
+                full_address,
+                google_maps,
+
+                hotel_phone,
+                hotel_email,
+
+                description_hotel,
+
+                checkin,
+                checkout,
+
+                familles_groupes,
+                max_personnes,
+
+                rooms_services,
+                hotel_services,
+
+                reception,
+
+                payment_methods,
+
+                choses_interdites,
+
+                extra_rules,
+
+                proche_de,
+                nearby_places,
+
+                rooms
+            ]
+        );
+
+        res.json({
+            message: "Hotel created",
+            hotel: result.rows[0]
+        });
+
+    }
+
+    catch(err){
+
+        console.error(err);
+
+        res.status(500).json({
+            message: "Erreur serveur"
+        });
+
+    }
+
+});
+
+app.post("/hotels/:id/images", authMiddleware, async (req,res)=>{
+
+    try{
+
+        const hotelId = req.params.id;
+
+        const { images } = req.body;
+
+        for(const img of images){
+
+            await pool.query(
+                `
+                INSERT INTO hotel_images(
+                    hotel_id,
+                    url,
+                    public_id,
+                    resource_type
+                )
+                VALUES($1,$2,$3,$4)
+                `,
+                [
+                    hotelId,
+                    img.url,
+                    img.public_id,
+                    img.resource_type
+                ]
+            );
+
+        }
+
+        res.json({
+            message:"Images uploaded"
+        });
+
+    }
+
+    catch(err){
+
+        console.error(err);
+
+        res.status(500).json({
+            message:"Erreur serveur"
+        });
+
+    }
+
+});
+
+app.post("/hotels/:id/logo", authMiddleware, async (req,res)=>{
+
+    try{
+
+        const hotelId = req.params.id;
+
+        const {
+            logo_url,
+            logo_public_id
+        } = req.body;
+
+        await pool.query(
+            `
+            UPDATE hotels
+            SET
+            logo_url = $1,
+            logo_public_id = $2
+            WHERE id = $3
+            `,
+            [
+                logo_url,
+                logo_public_id,
+                hotelId
+            ]
+        );
+
+        res.json({
+            message:"Logo updated"
+        });
+
+    }
+
+    catch(err){
+
+        console.error(err);
+
+        res.status(500).json({
+            message:"Erreur serveur"
+        });
+
+    }
+
+});app.post("/hotels/:id/logo", authMiddleware, async (req,res)=>{
+
+    try{
+
+        const hotelId = req.params.id;
+
+        const {
+            logo_url,
+            logo_public_id
+        } = req.body;
+
+        await pool.query(
+            `
+            UPDATE hotels
+            SET
+            logo_url = $1,
+            logo_public_id = $2
+            WHERE id = $3
+            `,
+            [
+                logo_url,
+                logo_public_id,
+                hotelId
+            ]
+        );
+
+        res.json({
+            message:"Logo updated"
+        });
+
+    }
+
+    catch(err){
+
+        console.error(err);
+
+        res.status(500).json({
+            message:"Erreur serveur"
+        });
+
+    }
+
+});
+
+app.get("/admin/hotels", authMiddleware, adminOnly, async(req,res)=>{
+
+    const result = await pool.query(
+        `
+        SELECT
+        hotels.*,
+        users.first_name,
+        users.last_name,
+        users.email
+
+        FROM hotels
+
+        JOIN users
+        ON hotels.user_id = users.id
+
+        ORDER BY hotels.created_at DESC
+        `
+    );
+
+    res.json(result.rows);
+
+});
+
+app.put("/admin/hotels/:id/approve",
+authMiddleware,
+adminOnly,
+async(req,res)=>{
+
+    await pool.query(
+        `
+        UPDATE hotels
+        SET approved = true
+        WHERE id = $1
+        `,
+        [req.params.id]
+    );
+
+    res.json({
+        message:"Approved"
+    });
+
+});
+
+app.put("/admin/hotels/:id/hide",
+authMiddleware,
+adminOnly,
+async(req,res)=>{
+
+    await pool.query(
+        `
+        UPDATE hotels
+        SET hidden = true
+        WHERE id = $1
+        `,
+        [req.params.id]
+    );
+
+    res.json({
+        message:"Hidden"
+    });
+
+});
+
+app.put("/admin/hotels/:id/hide",
+authMiddleware,
+adminOnly,
+async(req,res)=>{
+
+    await pool.query(
+        `
+        UPDATE hotels
+        SET hidden = true
+        WHERE id = $1
+        `,
+        [req.params.id]
+    );
+
+    res.json({
+        message:"Hidden"
+    });
+
 });
 
 const PORT = process.env.PORT || 5000;
