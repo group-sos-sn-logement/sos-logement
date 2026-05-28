@@ -348,70 +348,80 @@
     });
     }
 
-    // ===== عرض الفنادق غير المقبولة =====
+    function loadPendingHotels(){
 
-    fetch("https://sos-logement.onrender.com/admin/hotels-pending", {
-      headers: {
-        "Authorization": "Bearer " + token
-      }
-    })
-    .then(res => res.json())
-    .then(hotels => {
+      fetch(
+        "https://sos-logement.onrender.com/admin/hotels-pending",
+        {
+          headers:{
+            "Authorization":"Bearer " + token
+          }
+        }
+      )
 
-      hotels.forEach(h => {
+      .then(res => res.json())
 
-        container.innerHTML += `
+      .then(hotels => {
 
-        <div class="card">
+        const container =
+        document.getElementById("properties");
 
-          <h2>${h.hotel_name}</h2>
+        hotels.forEach(h => {
 
-          <p>🏨 Type: ${h.hotel_type}</p>
+          container.innerHTML += `
 
-          <p>📍 ${h.city_region}</p>
+          <div class="card">
 
-          <p>📞 ${h.hotel_phone}</p>
+            <h2>${h.hotel_name}</h2>
 
-          <p>🆔 Référence: ${h.hotel_code}</p>
+            <p>🏨 Type: ${h.hotel_type}</p>
 
-          <hr>
+            <p>📍 ${h.city_region}</p>
 
-          <p>
-          👤 ${h.first_name}
-          ${h.last_name}
-          </p>
+            <p>📞 ${h.hotel_phone}</p>
 
-          <p>
-          📧 ${h.email}
-          </p>
+            <p>🆔 Référence: ${h.hotel_code}</p>
 
-          <button
-          class="approve"
-          onclick="approveHotel(${h.id})"
-          >
-          Approve
-          </button>
+            <hr>
 
-          <button
-          onclick="hideHotel(${h.id})"
-          >
-          Hide
-          </button>
+            <p>
+            👤 ${h.first_name}
+            ${h.last_name}
+            </p>
 
-          <button
-          class="delete"
-          onclick="deleteHotel(${h.id})"
-          >
-          Delete
-          </button>
+            <p>
+            📧 ${h.email}
+            </p>
 
-        </div>
+            <button
+            class="approve"
+            onclick="approveHotel(${h.id})"
+            >
+            Approve
+            </button>
 
-        `;
+            <button
+            onclick="hideHotel(${h.id})"
+            >
+            Hide
+            </button>
+
+            <button
+            class="delete"
+            onclick="deleteHotel(${h.id})"
+            >
+            Delete
+            </button>
+
+          </div>
+
+          `;
+
+        });
 
       });
 
-    });
+    }
 
     function loadHiddenProperties(){
       fetch("https://sos-logement.onrender.com/admin/properties-hidden",{
@@ -1046,8 +1056,17 @@
     }
 
     function showPending(){
+
       showSection("pendingSection");
+
+      const container =
+      document.getElementById("properties");
+
+      container.innerHTML = "";
+
       loadProperties();
+      loadPendingHotels();
+
     }
 
     function showHidden(){
