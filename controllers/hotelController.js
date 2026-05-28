@@ -34,6 +34,10 @@ exports.createHotel = async (req, res) => {
       rooms
     } = req.body;
 
+    const hotel_code =
+    "HOTEL-" +
+    Math.floor(100000 + Math.random() * 900000);
+
     const result = await db.query(
       `
       INSERT INTO hotels (
@@ -58,14 +62,15 @@ exports.createHotel = async (req, res) => {
         extra_rules,
         proche_de,
         nearby_places,
-        rooms
+        rooms,
+        hotel_code
       )
       VALUES (
         $1,$2,$3,$4,$5,$6,
         $7,$8,$9,$10,$11,
         $12,$13,$14,$15,
         $16,$17,$18,$19,
-        $20,$21,$22
+        $20,$21,$22,$23
       )
       RETURNING *
       `,
@@ -92,7 +97,8 @@ exports.createHotel = async (req, res) => {
         JSON.stringify(extra_rules || []),
         JSON.stringify(proche_de || []),
         JSON.stringify(nearby_places || []),
-        JSON.stringify(rooms || [])
+        JSON.stringify(rooms || []),
+        hotel_code
       ]
     );
 
