@@ -9,7 +9,7 @@ exports.createHotel = async (req, res) => {
 
     try {
 
-        const owner_id = req.user.id;
+        const user_id = req.user.id;
 
         const {
 
@@ -51,7 +51,7 @@ exports.createHotel = async (req, res) => {
             `
             INSERT INTO hotels (
 
-                owner_id,
+                user_id,
 
                 hotel_name,
                 hotel_type,
@@ -102,7 +102,7 @@ exports.createHotel = async (req, res) => {
 
             [
 
-                owner_id,
+                user_id,
 
                 hotel_name,
                 hotel_type,
