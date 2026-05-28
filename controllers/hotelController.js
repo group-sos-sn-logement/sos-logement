@@ -6,162 +6,105 @@ const db = require("../db");
 // ===============================
 
 exports.createHotel = async (req, res) => {
+  try {
 
-    try {
+    const user_id = req.user.id;
 
-        const user_id = req.user.id;
+    const {
+      hotel_name,
+      hotel_type,
+      city_region,
+      full_address,
+      google_maps,
+      hotel_phone,
+      hotel_email,
+      description_hotel,
+      checkin,
+      checkout,
+      familles_groupes,
+      max_personnes,
+      rooms_services,
+      hotel_services,
+      reception,
+      payment_methods,
+      choses_interdites,
+      extra_rules,
+      proche_de,
+      nearby_places,
+      rooms
+    } = req.body;
 
-        const {
+    const result = await db.query(
+      `
+      INSERT INTO hotels (
+        user_id,
+        hotel_name,
+        hotel_type,
+        city_region,
+        full_address,
+        google_maps,
+        hotel_phone,
+        hotel_email,
+        description_hotel,
+        checkin,
+        checkout,
+        familles_groupes,
+        max_personnes,
+        rooms_services,
+        hotel_services,
+        reception,
+        payment_methods,
+        choses_interdites,
+        extra_rules,
+        proche_de,
+        nearby_places,
+        rooms
+      )
+      VALUES (
+        $1,$2,$3,$4,$5,$6,
+        $7,$8,$9,$10,$11,
+        $12,$13,$14,$15,
+        $16,$17,$18,$19,
+        $20,$21,$22
+      )
+      RETURNING *
+      `,
+      [
+        user_id,
+        hotel_name,
+        hotel_type,
+        city_region,
+        full_address,
+        google_maps,
+        hotel_phone,
+        hotel_email,
+        description_hotel,
+        checkin,
+        checkout,
 
-            hotel_name,
-            hotel_type,
-            city_region,
-            full_address,
-            google_maps,
-            hotel_phone,
-            hotel_email,
-            description_hotel,
+        JSON.stringify(familles_groupes || []),
+        max_personnes,
+        JSON.stringify(rooms_services || []),
+        JSON.stringify(hotel_services || []),
+        JSON.stringify(reception || []),
+        JSON.stringify(payment_methods || []),
+        JSON.stringify(choses_interdites || []),
+        JSON.stringify(extra_rules || []),
+        JSON.stringify(proche_de || []),
+        JSON.stringify(nearby_places || []),
+        JSON.stringify(rooms || [])
+      ]
+    );
 
-            checkin,
-            checkout,
+    res.status(201).json({
+      message: "Hôtel créé",
+      hotel: result.rows[0]
+    });
 
-            familles_groupes,
-            max_personnes,
-
-            rooms_services,
-            hotel_services,
-
-            reception,
-            payment_methods,
-
-            choses_interdites,
-
-            extra_rules,
-
-            proche_de,
-            nearby_places,
-
-            rooms
-
-        } = req.body;
-
-
-        const result = await db.query(
-
-            `
-            INSERT INTO hotels (
-
-                user_id,
-
-                hotel_name,
-                hotel_type,
-                city_region,
-                full_address,
-                google_maps,
-
-                hotel_phone,
-                hotel_email,
-
-                description_hotel,
-
-                checkin,
-                checkout,
-
-                familles_groupes,
-                max_personnes,
-
-                rooms_services,
-                hotel_services,
-
-                reception,
-                payment_methods,
-
-                choses_interdites,
-
-                extra_rules,
-
-                proche_de,
-                nearby_places,
-
-                rooms
-
-            )
-
-            VALUES (
-
-                $1,$2,$3,$4,$5,$6,
-                $7,$8,$9,$10,$11,
-                $12,$13,$14,$15,
-                $16,$17,$18,$19,
-                $20,$21,$22
-
-            )
-
-            RETURNING *
-            `,
-
-            [
-
-                user_id,
-
-                hotel_name,
-                hotel_type,
-                city_region,
-                full_address,
-                google_maps,
-
-                hotel_phone,
-                hotel_email,
-
-                description_hotel,
-
-                checkin,
-                checkout,
-
-                familles_groupes,
-                max_personnes,
-
-                rooms_services,
-                hotel_services,
-
-                reception,
-                payment_methods,
-
-                choses_interdites,
-
-                extra_rules,
-
-                proche_de,
-                nearby_places,
-
-                rooms
-
-            ]
-
-        );
-
-        res.status(201).json({
-
-            message: "Hôtel créé",
-
-            hotel: result.rows[0]
-
-        });
-
-    }
-
-    catch(err){
-
-        console.error(err);
-
-        res.status(500).json({
-
-            message: "Erreur serveur"
-
-        });
-
-    }
-
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 };
 
 
