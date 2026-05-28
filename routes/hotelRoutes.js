@@ -3,14 +3,6 @@ const router = express.Router();
 
 const auth = require("../middleware/auth");
 
-router.post("/", auth, async (req,res)=>{
-
-    res.json({
-        message:"Hotel route works"
-    });
-
-});
-
 module.exports = router;
 
 
