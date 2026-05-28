@@ -314,6 +314,8 @@
     const container = document.getElementById("properties");
     container.innerHTML = "";
 
+    // ===== عرض العقارات =====
+
     data.forEach(p => {
       container.innerHTML += `
       <div class="card">
@@ -345,6 +347,71 @@
     });
     });
     }
+
+    // ===== عرض الفنادق غير المقبولة =====
+
+    fetch("https://sos-logement.onrender.com/admin/hotels-pending", {
+      headers: {
+        "Authorization": "Bearer " + token
+      }
+    })
+    .then(res => res.json())
+    .then(hotels => {
+
+      hotels.forEach(h => {
+
+        container.innerHTML += `
+
+        <div class="card">
+
+          <h2>${h.hotel_name}</h2>
+
+          <p>🏨 Type: ${h.hotel_type}</p>
+
+          <p>📍 ${h.city_region}</p>
+
+          <p>📞 ${h.hotel_phone}</p>
+
+          <p>🆔 Référence: ${h.hotel_code}</p>
+
+          <hr>
+
+          <p>
+          👤 ${h.first_name}
+          ${h.last_name}
+          </p>
+
+          <p>
+          📧 ${h.email}
+          </p>
+
+          <button
+          class="approve"
+          onclick="approveHotel(${h.id})"
+          >
+          Approve
+          </button>
+
+          <button
+          onclick="hideHotel(${h.id})"
+          >
+          Hide
+          </button>
+
+          <button
+          class="delete"
+          onclick="deleteHotel(${h.id})"
+          >
+          Delete
+          </button>
+
+        </div>
+
+        `;
+
+      });
+
+    });
 
     function loadHiddenProperties(){
       fetch("https://sos-logement.onrender.com/admin/properties-hidden",{
@@ -1058,7 +1125,7 @@
       function loadHotels(){
 
         fetch(
-            "https://sos-logement.onrender.com/admin/hotels",
+            "https://sos-logement.onrender.com/admin/hotels-approved",
             {
                 headers:{
                     "Authorization":"Bearer " + token
@@ -1101,13 +1168,6 @@
                     <p>
                     📧 ${h.email}
                     </p>
-
-                    <button
-                    class="approve"
-                    onclick="approveHotel(${h.id})"
-                    >
-                    Approve
-                    </button>
 
                     <button
                     onclick="hideHotel(${h.id})"

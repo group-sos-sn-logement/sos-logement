@@ -289,34 +289,37 @@ exports.getApprovedHotels = async (req, res) => {
 
 exports.getAllHotelsAdmin = async (req, res) => {
 
-    try {
+  try {
 
-        const result = await db.query(
+    const result = await db.query(
+      `
+      SELECT
+        hotels.*,
 
-            `
-            SELECT *
+        users.first_name,
+        users.last_name,
+        users.email
 
-            FROM hotels
+      FROM hotels
 
-            ORDER BY created_at DESC
-            `
-        );
+      JOIN users
+      ON hotels.user_id = users.id
 
-        res.json(result.rows);
+      ORDER BY hotels.created_at DESC
+      `
+    );
 
-    }
+    res.json(result.rows);
 
-    catch(err){
+  } catch(err){
 
-        console.error(err);
+    console.error(err);
 
-        res.status(500).json({
+    res.status(500).json({
+      message: "Erreur serveur"
+    });
 
-            message: "Erreur serveur"
-
-        });
-
-    }
+  }
 
 };
 
@@ -366,5 +369,85 @@ exports.approveHotel = async (req, res) => {
         });
 
     }
+
+};
+
+// ===============================
+// إخفاء الفندق
+// ===============================
+
+exports.hideHotel = async (req, res) => {
+
+  try {
+
+    const hotelId = req.params.id;
+
+    await db.query(
+      `
+      UPDATE hotels
+      SET approved = false
+      WHERE id = $1
+      `,
+      [hotelId]
+    );
+
+    res.json({
+      message: "Hôtel masqué"
+    });
+
+  } catch(err){
+
+    console.error(err);
+
+    res.status(500).json({
+      message: "Erreur serveur"
+    });
+
+  }
+
+};
+
+
+// ===============================
+// حذف الفندق
+// ===============================
+
+exports.deleteHotel = async (req, res) => {
+
+  try {
+
+    const hotelId = req.params.id;
+
+    // حذف الصور أولاً
+    await db.query(
+      `
+      DELETE FROM hotel_images
+      WHERE hotel_id = $1
+      `,
+      [hotelId]
+    );
+
+    // حذف الفندق
+    await db.query(
+      `
+      DELETE FROM hotels
+      WHERE id = $1
+      `,
+      [hotelId]
+    );
+
+    res.json({
+      message: "Hôtel supprimé"
+    });
+
+  } catch(err){
+
+    console.error(err);
+
+    res.status(500).json({
+      message: "Erreur serveur"
+    });
+
+  }
 
 };

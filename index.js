@@ -3,6 +3,11 @@ const app = express();
 const hotelRoutes = require("./routes/hotelRoutes");
 require("dotenv").config();
 
+const adminHotelRoutes =
+require("./routes/adminHotelRoutes");
+
+app.use("/admin", adminHotelRoutes);
+
 const cors = require("cors");
 const helmet = require("helmet");
 
