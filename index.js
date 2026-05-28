@@ -1,7 +1,6 @@
 const express = require("express");
 const app = express();
 const hotelRoutes = require("./routes/hotelRoutes");
-
 require("dotenv").config();
 
 const cors = require("cors");
@@ -2147,25 +2146,6 @@ async(req,res)=>{
 
 });
 
-app.put("/admin/hotels/:id/hide",
-auth,
-adminOnly,
-async(req,res)=>{
-
-    await pool.query(
-        `
-        UPDATE hotels
-        SET hidden = true
-        WHERE id = $1
-        `,
-        [req.params.id]
-    );
-
-    res.json({
-        message:"Hidden"
-    });
-
-});
 
 app.put("/admin/hotels/:id/hide",
 auth,
