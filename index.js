@@ -478,101 +478,43 @@ const streamUpload = (fileBuffer) => {
 app.post("/properties/:id/images", auth, async (req, res) => {
   try {
 
-      console.log("FILES:", req.files);
-
-
     const propertyId = req.params.id;
 
-    // 🔥 1. جلب الصور القديمة
-    const oldImages = await pool.query(
-      "SELECT public_id, type FROM property_images WHERE property_id=$1",
-      [propertyId]
-    );
+    const { images } = req.body;
 
-    // 🔥 2. حذفها من Cloudinary
-    for (const img of oldImages.rows) {
+    if (!images || !Array.isArray(images)) {
+      return res.status(400).json({
+        message: "No images received"
+      });
+    }
 
-      await cloudinary.uploader.destroy(
-        img.public_id,
-        {
-          resource_type:
-            img.type === "video"
-              ? "video"
-              : "image"
-        }
+    for (const img of images) {
+
+      await pool.query(
+        `INSERT INTO property_images
+        (property_id, image_url, public_id, type)
+        VALUES ($1,$2,$3,$4)`,
+        [
+          propertyId,
+          img.url,
+          img.public_id,
+          img.resource_type
+        ]
       );
 
     }
 
-    // 🔥 3. حذفها من DB
-    await pool.query(
-      "DELETE FROM property_images WHERE property_id=$1",
-      [propertyId]
-    );
+    res.json({
+      message: "Images saved successfully"
+    });
 
-    // 🔥 4. رفع الصور الجديدة
-    for (const file of req.files) {
-
-      const result = await new Promise((resolve, reject) => {
-
-        const stream = cloudinary.uploader.upload_stream(
-          {
-            folder: "sos-logement",
-
-            resource_type: "auto",
-
-            quality: "auto:good",
-
-            fetch_format: "auto",
-
-            transformation: file.mimetype.startsWith("image/")
-              ? [
-                  {
-                    width: 1200,
-                    height: 800,
-                    crop: "limit",
-                    quality: "auto:good",
-                    fetch_format: "auto",
-                    flags: "progressive"
-                  }
-                ]
-              : []
-          },
-
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
-        );
-
-        streamifier
-          .createReadStream(file.buffer)
-          .pipe(stream);
-
-      });
-
-      await pool.query(
-        `INSERT INTO property_images 
-        (property_id, image_url, public_id, type)
-        VALUES ($1,$2,$3,$4)`,
-
-        [
-          propertyId,
-          result.secure_url,
-          result.public_id,
-          result.resource_type
-        ]
-      );
-  }
-
-  res.json({ message: "Images replaced ✅" });
-
-    } catch (err) {
-      console.error("UPLOAD ERROR FULL:", err);
-      res.status(500).json({ message: "Erreur serveur" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: "Erreur serveur"
+    });
   }
 });
-
 /* =========================
    COVER IMAGE
 ========================= */
@@ -756,7 +698,7 @@ app.post("/login", async (req, res) => {
         role: user.role
       },
       process.env.JWT_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "1h" }
     );
     const refreshToken = jwt.sign(
       { id: user.id },
@@ -819,7 +761,7 @@ app.post("/refresh-token", async (req, res) => {
         role: user.rows[0].role
       },
       process.env.JWT_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "1h" }
     );
 
     res.json({ accessToken: newAccessToken });
