@@ -7,183 +7,8 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#111827">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-      body {
-        margin: 0;
-        font-family: 'Times New Roman', Times, serif;
-      }
-      .hidden {
-        display: none;
-      }
+    <link rel="stylesheet" href="admin.css" type="text/css">
 
-
-      /* Layout */
-      .layout {
-        height: 100vh;
-      }
-
-      /* Sidebar */
-      .sidebar {
-        width: 220px;
-        background: #111827;
-        color: white;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-
-        position: fixed;   /* 👈 يخليه ثابت */
-        top: 0;
-        left: 0;
-        height: 100vh;
-
-        overflow-y: auto;  /* 👈 يخلي الأزرار فقط scroll */
-      }
-
-      .sidebar h2 {
-        margin-bottom: 20px;
-      }
-
-      .sidebar button {
-        background: none;
-        border: none;
-        color: white;
-        padding: 10px;
-        text-align: left;
-        cursor: pointer;
-        border-radius: 8px;
-        margin-bottom: 5px;
-      }
-
-      .sidebar button:hover {
-        background: #1f2937;
-      }
-
-      .logout {
-        background: red !important;
-      }
-
-      /* Content */
-      .content {
-        flex: 1;
-        background: #f5f5f5;
-        padding: 20px;
-        overflow-y: auto;
-        position: relative;
-        margin-left: 240px; /* 👈 هذا هو الحل */
-
-      }
-
-      /* Cards */
-      .card {
-        background: white;
-        padding: 15px;
-        margin-bottom: 15px;
-        border-radius: 8px;
-      }
-
-      /* Buttons */
-      .approve {
-        background: green;
-        color: white;
-      }
-
-      .delete {
-        background: red;
-        color: white;
-      }
-
-      
-      .search {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-
-      width: 45px;
-      height: 45px;
-
-      border-radius: 50%;
-      border: 1px solid #ccc;
-      padding: 10px;
-
-      transition: 0.3s;
-      overflow: hidden;
-      }
-
-    /* عند التركيز */
-    .search:focus {
-      width: 300px;
-      border-radius: 8px;
-    }
-
-      /* زر دائري */
-      .menu-toggle {
-        display: none;
-      }
-
-      .overlay {
-        display: none;
-      }
-
-      /* 📱 موبايل فقط */
-      @media (max-width: 768px) {
-
-        .menu-toggle {
-          display: flex;
-          position: fixed;
-          top: 20px;
-          left: 20px;
-          width: 55px;
-          margin-bottom: 40px;
-          height: 55px;
-          border-radius: 50%;
-          background: #111827;
-          color: white;
-          font-size: 22px;
-          border: none;
-          z-index: 2000;
-          align-items: center;
-          justify-content: center;
-          transition: 0.3s;
-        }
-
-        .menu-toggle.hide {
-          display: none;
-        }
-
-        /* Sidebar يصبح مخفي */
-        .sidebar {
-          left: -250px;
-          transition: 0.3s;
-          z-index: 1500;
-        }
-
-        .sidebar.show {
-          left: 0;
-        }
-
-        /* Overlay */
-        .overlay {
-          position: fixed;
-          width: 100%;
-          height: 100%;
-          background: rgba(0,0,0,0.4);
-          z-index: 1400;
-        }
-
-        .overlay.show {
-          display: block;
-        }
-
-        /* إزالة margin لأن sidebar مخفي */
-        .content {
-          margin-left: 0;
-          padding-top: 80px;
-
-
-        }
-      }
-
-    </style>
   </head>
   <body>
 
@@ -241,6 +66,22 @@
   <div id="stats" class="card section hidden"></div><br>
 
   <canvas id="statsChart" width="400" height="200"></canvas>
+
+  <div class="charts-grid">
+
+    <div class="chart-box">
+      <canvas id="usersPie"></canvas>
+    </div>
+
+    <div class="chart-box">
+      <canvas id="growthLine"></canvas>
+    </div>
+
+    <div class="chart-box">
+      <canvas id="systemBar"></canvas>
+    </div>
+
+  </div>
 
   <div id="approvedSection" class="section hidden">
     <h2>🏠 Biens approuvés</h2>
@@ -319,17 +160,19 @@
     data.forEach(p => {
       container.innerHTML += `
       <div class="card">
-      ${p.images ? p.images.map(img => `
-        <div>
-          <img src="${img.url}" width="100">
-
-          <button onclick="setCover('${img.url}', ${p.id})">
-            ⭐ Set Cover
-          </button>
-
-          <button onclick="deleteImage(${img.id})">🗑️ Delete</button>
+      ${p.images && p.images.length > 0 ? `
+        <div class="images-grid">
+          ${p.images.map(img => `
+            <div class="img-box">
+              <img src="${img.url}" style="width:120px; height:80px; object-fit:cover; border-radius:8px;">
+              <div>
+                <button onclick="setCover('${img.url}', ${p.id})">⭐ Cover</button>
+                <button onclick="deleteImage(${img.id})">🗑️</button>
+              </div>
+            </div>
+          `).join("")}
         </div>
-      `).join("") : ""}
+      ` : `<p>🚫 No images</p>`}
       <p><b>${p.city}</b> - ${p.price} FCFA</p>
 
       <hr>
@@ -485,6 +328,53 @@
       });
     }
             
+    function loadUsersPie(data){
+
+      new Chart(document.getElementById("usersPie"), {
+        type: "pie",
+        data: {
+          labels: ["Owners", "Students", "Seekers"],
+          datasets: [{
+            data: [data.owners, data.students, data.seekers]
+          }]
+        }
+      });
+
+    }
+    function loadGrowthLine(data){
+
+      new Chart(document.getElementById("growthLine"), {
+        type: "line",
+        data: {
+          labels: data.labels, // مثلا الأيام
+          datasets: [{
+            label: "Users Growth",
+            data: data.values,
+            fill: true
+          }]
+        }
+      });
+
+    }
+    function loadSystemBar(data){
+
+      new Chart(document.getElementById("systemBar"), {
+        type: "bar",
+        data: {
+          labels: ["Users", "Properties", "Hotels", "Requests"],
+          datasets: [{
+            label: "System Overview",
+            data: [
+              data.totalUsers,
+              data.totalProperties,
+              data.totalHotels,
+              data.pendingProperties
+            ]
+          }]
+        }
+      });
+
+    }
     function loadOwners() {
       fetch("https://sos-logement.onrender.com/admin/all-owner-requests", {
         headers: { "Authorization": "Bearer " + token }
@@ -947,40 +837,106 @@
     }  
 
 
-    function loadStats(){
+  function loadStats(){
 
-      fetch("https://sos-logement.onrender.com/admin/stats",{
+    fetch("https://sos-logement.onrender.com/admin/stats",{
       headers:{ "Authorization": "Bearer " + token }
-      })
+    })
 
-      .then(res=>res.json())
+    .then(res => res.json())
+    .then(data => {
 
-      .then(data=>{
-
+      // =========================
+      // 1) الإحصائيات (Cards)
+      // =========================
       document.getElementById("stats").innerHTML = `
-      <p>Total utilisateurs: ${data.totalUsers}</p>
-      <p>Propriétaires: ${data.owners}</p>
-      <p>Étudiants: ${data.students}</p>
-      <p>Chercheurs: ${data.seekers}</p>
-      <p>Visiteurs: ${data.visitors}</p>
-      <p>Utilisateurs bannis: ${data.bannedUsers}</p>
-      <p>Biens en attente: ${data.pendingProperties}</p>
-      <p>Biens approuvés: ${data.approvedProperties}</p>
-      <p>Total biens: ${data.totalProperties}</p>
+        <div class="stats-grid">
+
+          <div class="stat-card">
+            <h3>Total utilisateurs</h3>
+            <h1>${data.totalUsers}</h1>
+          </div>
+
+          <div class="stat-card">
+            <h3>Propriétaires</h3>
+            <h1>${data.owners}</h1>
+          </div>
+
+          <div class="stat-card">
+            <h3>Étudiants</h3>
+            <h1>${data.students}</h1>
+          </div>
+
+          <div class="stat-card">
+            <h3>Chercheurs</h3>
+            <h1>${data.seekers}</h1>
+          </div>
+
+          <div class="stat-card">
+            <h3>Visiteurs</h3>
+            <h1>${data.visitors}</h1>
+          </div>
+
+          <div class="stat-card">
+            <h3>Bannis</h3>
+            <h1>${data.bannedUsers}</h1>
+          </div>
+
+          <div class="stat-card">
+            <h3>En attente</h3>
+            <h1>${data.pendingProperties}</h1>
+          </div>
+
+          <div class="stat-card">
+            <h3>Approuvés</h3>
+            <h1>${data.approvedProperties}</h1>
+          </div>
+
+          <div class="stat-card">
+            <h3>Total biens</h3>
+            <h1>${data.totalProperties}</h1>
+          </div>
+
+        </div>
       `;
 
-      loadChart(data);
+      // =========================
+      // 2) Charts (كل الرسوم)
+      // =========================
 
+      loadChart(data);        // bar chart الرئيسي
+      loadUsersPie(data);     // pie chart
+      loadSystemBar(data);    // system overview
+
+      // إذا ما عندك API تاريخي، نخليه تجريبي
+      loadGrowthLine({
+        labels: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+        values: [
+          data.totalUsers * 0.6,
+          data.totalUsers * 0.65,
+          data.totalUsers * 0.7,
+          data.totalUsers * 0.75,
+          data.totalUsers * 0.8,
+          data.totalUsers * 0.9,
+          data.totalUsers
+        ]
       });
 
-    }
+    });
+
+  }
 
 
     let currentEditId = null;
 
       function editProperty(id){
         currentEditId = id;
+
         document.getElementById("editModal").classList.remove("hidden");
+
+        // (اختياري) تنظيف الحقول
+        document.getElementById("editPrice").value = "";
+        document.getElementById("editCity").value = "";
       }
 
       function closeEdit(){
@@ -1033,18 +989,25 @@
     
 
     function showSection(sectionId) {
-        document.querySelectorAll(".section").forEach(sec => {
-            sec.classList.add("hidden");
-        });
+      document.querySelectorAll(".section").forEach(sec => {
+        sec.classList.add("hidden");
+      });
 
-        document.getElementById(sectionId).classList.remove("hidden");
+      const el = document.getElementById(sectionId);
+      if (el) el.classList.remove("hidden");
 
-        // 👇 هنا السحر
-        if (sectionId === "ownersSection") {
-            loadOwners();
-        }
+      // تحميل خاص حسب القسم
+      if (sectionId === "ownersSection") loadOwners();
+      if (sectionId === "approvedSection") loadApprovedProperties();
+      if (sectionId === "pendingSection") {
+        loadProperties();
+        loadPendingHotels();
+      }
+      if (sectionId === "hiddenSection") loadHiddenProperties();
+      if (sectionId === "studentsSection") loadStudents();
+      if (sectionId === "seekersSection") loadSeekers();
+      if (sectionId === "diasporaSection") loadDiasporaMessages();
     }
-
     function showStats(){
       showSection("stats");
       loadStats();
@@ -1277,6 +1240,9 @@
         }
 
       }
+      window.addEventListener("DOMContentLoaded", () => {
+        showStats(); // أول صفحة تظهر
+      });
 
     </script>
 

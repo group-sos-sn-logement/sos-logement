@@ -352,16 +352,30 @@ app.post("/register",
 app.post("/properties", auth, async (req, res) => {
   try {
 
-   const userFromDB = await pool.query(
-  "SELECT role, approved FROM users WHERE id = $1",
-  [req.user.id]
-);
+    const userFromDB = await pool.query(
+      "SELECT role, approved FROM users WHERE id = $1",
+      [req.user.id]
+    );
 
-const user = userFromDB.rows[0];
+    if(userFromDB.rows.length === 0){
+      return res.status(404).json({
+        message: "Utilisateur introuvable"
+      });
+    }
 
-if (user.role !== "owner" || user.approved !== true) {
-  return res.status(403).json({ message: "Accès refusé" });
-}
+    const user = userFromDB.rows[0];
+
+    if (user.role !== "owner" || user.approved !== true) {
+      return res.status(403).json({
+        message: "Seuls les propriétaires approuvés peuvent publier des biens."
+      });
+    }
+
+    if (user.approved !== true) {
+      return res.status(403).json({
+        message: "Votre compte propriétaire est en attente de validation."
+      });
+    }
 
     const ownerId = req.user.id;
     const { title, type, description, city, exact_location, price, chambres, cuisine, sdb, salon, is_student, max_students } = req.body;
