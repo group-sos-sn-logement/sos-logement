@@ -13,12 +13,7 @@ const helmet = require("helmet");
 
 const allowedOrigins = [
   "http://127.0.0.1:5501",
-  "http://localhost:5501",
-  "http://127.0.0.1:5502",
-  "http://localhost:5000",
   "https://sos-logement.netlify.app",
-  "https://dynamic-kataifi-a54e97.netlify.app",
-  "https://sos-logement.onrender.com"
 ].filter(Boolean);
 
 app.use(helmet());
