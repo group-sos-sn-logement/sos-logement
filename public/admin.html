@@ -157,6 +157,8 @@
 
     // ===== عرض العقارات =====
 
+    console.log(data);
+
     data.forEach(p => {
       container.innerHTML += `
       <div class="card">
@@ -496,6 +498,30 @@
       data.forEach(p=>{
 
       container.innerHTML += `
+        ${p.images && p.images.length > 0 ? `
+          <div class="images-grid">
+            ${p.images.map(img => `
+              <div class="img-box">
+                <img
+                  src="${img.url}"
+                  style="width:120px;height:80px;object-fit:cover;border-radius:8px;"
+                >
+
+                <div>
+                  <button onclick="setCover('${img.url}', ${p.id})">
+                    ⭐ Cover
+                  </button>
+
+                  <button onclick="deleteImage(${img.id})">
+                    🗑️
+                  </button>
+                </div>
+
+              </div>
+            `).join("")}
+          </div>
+        ` : `<p>🚫 No images</p>`}
+
         <div class="card">
           <h3>${p.title}</h3>
           <p><b>${p.city}</b></p> 

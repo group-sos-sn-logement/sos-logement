@@ -1163,15 +1163,32 @@ app.get("/admin/owner-requests", auth, adminOnly, async (req, res) => {
 app.get("/admin/properties", auth, adminOnly, async (req, res) => {
   try {
    const result = await pool.query(`
-      SELECT p.*, 
-              u.first_name, 
-              u.last_name, 
-              u.phone, 
-              u.owner_ref,
-              u.email
+      SELECT
+        p.*,
+        u.first_name,
+        u.last_name,
+        u.phone,
+        u.owner_ref,
+        u.email,
+
+        (
+          SELECT json_agg(
+            json_build_object(
+              'id', pi.id,
+              'url', pi.image_url,
+              'type', pi.type
+            )
+          )
+          FROM property_images pi
+          WHERE pi.property_id = p.id
+        ) AS images
+
       FROM properties p
-      JOIN users u ON p.owner_id = u.id
-      WHERE p.status = 'pending'
+      JOIN users u
+      ON p.owner_id = u.id
+
+      WHERE p.status='pending'
+
       ORDER BY p.id DESC
     `);
     res.json(result.rows);
@@ -1397,15 +1414,32 @@ app.get("/admin/properties-approved", auth, adminOnly, async (req,res)=>{
   try{
 
     const result = await pool.query(`
-      SELECT p.*, 
-              u.first_name, 
-              u.last_name, 
-              u.phone, 
-              u.owner_ref,
-              u.email
+      SELECT
+        p.*,
+        u.first_name,
+        u.last_name,
+        u.phone,
+        u.owner_ref,
+        u.email,
+
+        (
+          SELECT json_agg(
+            json_build_object(
+              'id', pi.id,
+              'url', pi.image_url,
+              'type', pi.type
+            )
+          )
+          FROM property_images pi
+          WHERE pi.property_id = p.id
+        ) AS images
+
       FROM properties p
-      JOIN users u ON p.owner_id = u.id
-      WHERE p.status = 'approved'
+      JOIN users u
+      ON p.owner_id = u.id
+
+      WHERE p.status='approved'
+
       ORDER BY p.id DESC
     `);
 
@@ -1421,15 +1455,32 @@ app.get("/admin/properties-hidden", auth, adminOnly, async (req,res)=>{
   try{
 
     const result = await pool.query(`
-      SELECT p.*, 
-              u.first_name, 
-              u.last_name, 
-              u.phone, 
-              u.owner_ref,
-              u.email
+      SELECT
+        p.*,
+        u.first_name,
+        u.last_name,
+        u.phone,
+        u.owner_ref,
+        u.email,
+
+        (
+          SELECT json_agg(
+            json_build_object(
+              'id', pi.id,
+              'url', pi.image_url,
+              'type', pi.type
+            )
+          )
+          FROM property_images pi
+          WHERE pi.property_id = p.id
+        ) AS images
+
       FROM properties p
-      JOIN users u ON p.owner_id = u.id
-      WHERE p.status = 'hidden'
+      JOIN users u
+      ON p.owner_id = u.id
+
+      WHERE p.status='hidden'
+
       ORDER BY p.id DESC
     `);
 
