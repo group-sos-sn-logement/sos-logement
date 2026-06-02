@@ -15,6 +15,8 @@ const allowedOrigins = [
   "http://127.0.0.1:5501",
   "http://127.0.0.1:5502",
   "https://sos-logement.netlify.app",
+  "https://soslogement.sn",
+  "https://www.soslogement.sn"
 ].filter(Boolean);
 
 app.use(helmet());
