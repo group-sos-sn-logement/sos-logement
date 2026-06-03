@@ -573,6 +573,9 @@ app.post("/register-owner",
     try {
       const { first_name, last_name, email, phone, password, conditions, commission } = req.body;
 
+      if (!first_name || !last_name || !email || !phone || !password || !conditions || !commission) {
+        return res.status(400).json({ message: "Tous les champs sont obligatoires" });
+      }
       // 🔍 تحقق من وجود المستخدم
       const existing = await pool.query(
         "SELECT id FROM users WHERE email=$1",
