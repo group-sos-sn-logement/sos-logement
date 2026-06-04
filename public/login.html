@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#111827">
+    <link rel="icon" href="SOS-LOGEMENT-01.png">
+
+    <style> 
+
+      .body{
+        background-color: rgb(244, 244, 244);
+      }
+      .one
+      {
+        
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+
+      }
+
+      .one fieldset
+      {
+        width: 50%;
+        background-color: azure;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .one fieldset p{
+        text-align: center;
+      }
+      .btn{
+        width: 100px;
+        border-radius: 5px;
+        overflow: hidden;
+        margin-top: 10px;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+  <body class="body">
+
+    <div class="one"> 
+
+      <fieldset>
+        <legend>Backend de <b>SOS LOGEMENT</b></legend>
+            
+          <p>Admin:<b> Groupe sos.logement.</b></p><br> 
+
+          <input id="email" placeholder="Email"><br><br> 
+
+          <input id="password" type="password" placeholder="Mot de passe"><br><br> 
+
+          <button onclick="login()" class="btn">Login</button>
+
+
+      </fieldset>
+
+    </div> 
+
+
+    <script>
+      async function login() {
+
+        try {
+
+          const res = await fetch("https://sos-logement.onrender.com/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              email: document.getElementById("email").value,
+              password: document.getElementById("password").value
+            })
+          });
+
+          const data = await res.json();
+
+          console.log(data);
+
+          if (!res.ok) {
+            alert(data.message || "Login failed");
+            return;
+          }
+
+          if (!data.accessToken) {
+            alert("No token received");
+            return;
+          }
+
+          localStorage.setItem("token", data.accessToken);
+
+          alert("Login success ✅");
+
+          window.location.href = "admin.html";
+
+        } catch(err) {
+
+          console.error(err);
+          alert("Server error");
+
+        }
+      }
+      </script>
+      <script>
+
+        // كل كودك الحالي هنا ...
+
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.register("/sw.js")
+            .then(() => console.log("SW Registered"));
+        }
+
+      </script>
+
+  </body>
+</html>
