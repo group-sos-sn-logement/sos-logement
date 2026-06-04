@@ -1235,6 +1235,135 @@ await pool.query(
 res.json({message:"Hidden"});
 });
 
+app.get("/my-properties/:id", auth, async (req, res) => {
+  try {
+
+    const result = await pool.query(
+      `SELECT *
+       FROM properties
+       WHERE id=$1
+       AND owner_id=$2`,
+      [req.params.id, req.user.id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        message: "Bien introuvable"
+      });
+    }
+
+    res.json(result.rows[0]);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: "Erreur serveur"
+    });
+  }
+});
+
+app.put("/my-properties/:id", auth, async (req, res) => {
+  try {
+
+    const check = await pool.query(
+      `SELECT *
+       FROM properties
+       WHERE id=$1
+       AND owner_id=$2`,
+      [req.params.id, req.user.id]
+    );
+
+    if (!check.rows.length) {
+      return res.status(403).json({
+        message: "Accès refusé"
+      });
+    }
+
+    const {
+      title,
+      type,
+      description,
+      city,
+      exact_location,
+      price,
+      chambres,
+      cuisine,
+      sdb,
+      salon,
+      is_student,
+      max_students
+    } = req.body;
+
+    await pool.query(
+      `UPDATE properties
+       SET
+         title=$1,
+         type=$2,
+         description=$3,
+         city=$4,
+         exact_location=$5,
+         price=$6,
+         chambres=$7,
+         cuisine=$8,
+         sdb=$9,
+         salon=$10,
+         is_student=$11,
+         max_students=$12,
+         status='pending'
+       WHERE id=$13`,
+      [
+        title,
+        type,
+        description,
+        city,
+        exact_location,
+        price,
+        chambres,
+        cuisine,
+        sdb,
+        salon,
+        is_student,
+        max_students,
+        req.params.id
+      ]
+    );
+
+    res.json({
+      message: "Modification enregistrée"
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: "Erreur serveur"
+    });
+  }
+});
+
+app.get("/my-properties/:id", auth, async (req,res)=>{
+
+  const result = await pool.query(
+    `
+    SELECT *
+    FROM properties
+    WHERE id=$1
+    AND owner_id=$2
+    `,
+    [
+      req.params.id,
+      req.user.id
+    ]
+  );
+
+  if(!result.rows.length){
+    return res.status(404).json({
+      message:"Bien introuvable"
+    });
+  }
+
+  res.json(result.rows[0]);
+});
+
 app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
   try {
     const userId = req.params.id;
