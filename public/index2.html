@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#111827">
+  <meta charset="UTF-8">
+  <title>Biens immobiliers</title>
+</head>
+<body>
+  <h1>Biens disponibles</h1>
+  <div id="properties"></div>
+
+  <script src="app.js"></script>
+  <script>
+
+    // كل كودك الحالي هنا ...
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js")
+        .then(() => console.log("SW Registered"));
+    }
+
+  </script>
+</body>
+</html>
