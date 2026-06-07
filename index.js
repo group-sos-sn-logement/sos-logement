@@ -376,7 +376,7 @@ app.post("/properties", auth, async (req, res) => {
     }
 
     const ownerId = req.user.id;
-    const { title, type, description, city, exact_location, price, chambres, cuisine, sdb, salon, is_student, max_students } = req.body;
+    const { title, type, description, city, exact_location, price, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2 } = req.body;
 
     const owner = await pool.query(
       "SELECT owner_ref FROM users WHERE id = $1",
@@ -417,10 +417,10 @@ app.post("/properties", auth, async (req, res) => {
     }
     const result = await pool.query(
       `INSERT INTO properties 
-       (owner_id, property_code, title, type, description, city, exact_location, price, chambres, cuisine, sdb, salon, is_student, max_students, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'pending')
+       (owner_id, property_code, title, type, description, city, exact_location, price, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, 'pending')
        RETURNING *`,
-      [ownerId, propertyCode, title, type, description, city, exact_location, cleanedPrice, chambres, cuisine, sdb, salon, is_student, max_students]
+      [ownerId, propertyCode, title, type, description, city, exact_location, cleanedPrice, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2]
     );
     res.json({ message: "Bien ajouté", property: result.rows[0] });
 
@@ -1235,34 +1235,46 @@ await pool.query(
 res.json({message:"Hidden"});
 });
 
-app.get("/my-properties/:id", auth, async (req, res) => {
-  try {
+app.get("/owner/properties/:id", auth, async (req,res)=>{
 
-    const result = await pool.query(
-      `SELECT *
-       FROM properties
-       WHERE id=$1
-       AND owner_id=$2`,
-      [req.params.id, req.user.id]
-    );
+const result = await pool.query(
+`
+SELECT
+p.*,
 
-    if (!result.rows.length) {
-      return res.status(404).json({
-        message: "Bien introuvable"
-      });
-    }
+(
+SELECT json_agg(
+json_build_object(
+'id',pi.id,
+'url',pi.image_url,
+'type',pi.type
+)
+)
+FROM property_images pi
+WHERE pi.property_id=p.id
+) AS images
 
-    res.json(result.rows[0]);
+FROM properties p
+WHERE p.id=$1
+AND p.owner_id=$2
+`,
+[
+req.params.id,
+req.user.id
+]
+);
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      message: "Erreur serveur"
-    });
-  }
+if(!result.rows.length){
+return res.status(404).json({
+message:"Bien introuvable"
+});
+}
+
+res.json(result.rows[0]);
+
 });
 
-app.put("/my-properties/:id", auth, async (req, res) => {
+app.put("/owner/properties/:id", auth, async (req, res) => {
   try {
 
     const check = await pool.query(
@@ -1291,7 +1303,8 @@ app.put("/my-properties/:id", auth, async (req, res) => {
       sdb,
       salon,
       is_student,
-      max_students
+      max_students,
+      surface_m2
     } = req.body;
 
     await pool.query(
@@ -1309,7 +1322,8 @@ app.put("/my-properties/:id", auth, async (req, res) => {
          salon=$10,
          is_student=$11,
          max_students=$12,
-         status='pending'
+         surface_m2=$13,
+         status='pending'  
        WHERE id=$13`,
       [
         title,
@@ -1324,9 +1338,23 @@ app.put("/my-properties/:id", auth, async (req, res) => {
         salon,
         is_student,
         max_students,
+        surface_m2,
         req.params.id
       ]
     );
+
+    await resend.emails.send({
+      from: process.env.EMAIL_USER,
+      to: "support@sossnlogement.freshdesk.com",
+      subject: "🏠 Modification d'un bien",
+      text: `
+    Un propriétaire a modifié un bien.
+
+    ID Bien: ${req.params.id}
+
+    Le bien est repassé en attente de validation.
+    `
+    });
 
     res.json({
       message: "Modification enregistrée"
@@ -1340,30 +1368,201 @@ app.put("/my-properties/:id", auth, async (req, res) => {
   }
 });
 
-app.get("/my-properties/:id", auth, async (req,res)=>{
 
-  const result = await pool.query(
-    `
-    SELECT *
-    FROM properties
-    WHERE id=$1
-    AND owner_id=$2
-    `,
-    [
-      req.params.id,
-      req.user.id
-    ]
-  );
+/* =========================
+   DELETE OWNER PROPERTY
+========================= */
 
-  if(!result.rows.length){
-    return res.status(404).json({
-      message:"Bien introuvable"
+app.delete("/owner/properties/:id", auth, async (req,res)=>{
+  try{
+
+    const property = await pool.query(
+      `
+      SELECT *
+      FROM properties
+      WHERE id=$1
+      AND owner_id=$2
+      `,
+      [
+        req.params.id,
+        req.user.id
+      ]
+    );
+
+    if(!property.rows.length){
+      return res.status(404).json({
+        message:"Bien introuvable"
+      });
+    }
+
+    const images = await pool.query(
+      `
+      SELECT *
+      FROM property_images
+      WHERE property_id=$1
+      `,
+      [req.params.id]
+    );
+
+    for(const img of images.rows){
+
+      if(img.public_id){
+
+        await cloudinary.uploader.destroy(
+          img.public_id,
+          {
+            resource_type:
+            img.type === "video"
+            ? "video"
+            : "image"
+          }
+        );
+
+      }
+
+    }
+
+    await pool.query(
+      "DELETE FROM properties WHERE id=$1",
+      [req.params.id]
+    );
+
+    res.json({
+      message:"Bien supprimé"
+    });
+
+  }catch(err){
+    console.error(err);
+    res.status(500).json({
+      message:"Erreur serveur"
     });
   }
-
-  res.json(result.rows[0]);
 });
 
+app.post(
+"/owner/properties/:id/images",
+auth,
+upload.array("media",10),
+
+async(req,res)=>{
+
+try{
+
+const property = await pool.query(
+`
+SELECT *
+FROM properties
+WHERE id=$1
+AND owner_id=$2
+`,
+[
+req.params.id,
+req.user.id
+]
+);
+
+if(!property.rows.length){
+return res.status(403).json({
+message:"Accès refusé"
+});
+}
+
+for(const file of req.files){
+
+const result =
+await streamUpload(file.buffer);
+
+await pool.query(
+`
+INSERT INTO property_images
+(property_id,image_url,public_id,type)
+VALUES($1,$2,$3,$4)
+`,
+[
+req.params.id,
+result.secure_url,
+result.public_id,
+result.resource_type
+]
+);
+
+}
+
+res.json({
+message:"Images ajoutées"
+});
+
+}catch(err){
+console.error(err);
+res.status(500).json({
+message:"Erreur serveur"
+});
+}
+
+});
+
+app.delete(
+"/owner/images/:id",
+auth,
+
+async(req,res)=>{
+
+try{
+
+const image = await pool.query(
+`
+SELECT
+pi.*,
+p.owner_id
+FROM property_images pi
+JOIN properties p
+ON pi.property_id = p.id
+WHERE pi.id=$1
+`,
+[req.params.id]
+);
+
+if(!image.rows.length){
+return res.status(404).json({
+message:"Image introuvable"
+});
+}
+
+if(
+image.rows[0].owner_id !== req.user.id
+){
+return res.status(403).json({
+message:"Accès refusé"
+});
+}
+
+await cloudinary.uploader.destroy(
+image.rows[0].public_id,
+{
+resource_type:
+image.rows[0].type === "video"
+? "video"
+: "image"
+}
+);
+
+await pool.query(
+"DELETE FROM property_images WHERE id=$1",
+[req.params.id]
+);
+
+res.json({
+message:"Image supprimée"
+});
+
+}catch(err){
+console.error(err);
+res.status(500).json({
+message:"Erreur serveur"
+});
+}
+
+});
 app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
   try {
     const userId = req.params.id;
