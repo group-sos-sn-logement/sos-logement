@@ -107,6 +107,13 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
+app.get("/verify-token", authenticateToken, (req,res)=>{
+    res.json({
+        success:true,
+        role:req.user.role
+    });
+});
+
 const { Resend } = require("resend");
 
 const resend = new Resend(process.env.RESEND_API_KEY);
