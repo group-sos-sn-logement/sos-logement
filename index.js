@@ -107,11 +107,11 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-app.get("/verify-token", authenticateToken, (req,res)=>{
-    res.json({
-        success:true,
-        role:req.user.role
-    });
+app.get("/verify-token", auth, (req, res) => {
+  res.json({
+    success: true,
+    role: req.user.role
+  });
 });
 
 const { Resend } = require("resend");
@@ -1331,7 +1331,7 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
          max_students=$12,
          surface_m2=$13,
          status='pending'  
-       WHERE id=$13`,
+       WHERE id=$14`,
       [
         title,
         type,

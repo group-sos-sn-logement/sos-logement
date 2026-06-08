@@ -23,8 +23,10 @@ async function auth(req, res, next) {
 
   const authHeader = req.headers.authorization;
 
-  if (!authHeader) {
-    return res.status(401).json({ message: "Accès refusé" });
+  if (!authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({
+      message: "Format du token invalide"
+    });
   }
 
   const token = authHeader.split(" ")[1];
