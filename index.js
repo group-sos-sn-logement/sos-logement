@@ -114,10 +114,18 @@ app.get("/verify-token", auth, (req, res) => {
   });
 });
 
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
 
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 let visitors = 0;
 
 app.use((req, res, next) => {
@@ -202,22 +210,23 @@ app.post("/contact", async (req, res) => {
   try {
     const { full_name, email, phone, subject, message, is_owner } = req.body;
 
-    await resend.emails.send({
-      from: process.env.EMAIL_USER, // مهم
-      to: "support@sossnlogement.freshdesk.com",
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+
+      to: process.env.EMAIL_USER,
       subject: `📩 Contactez-nous ${full_name}`,
       text: `
-Nom: ${full_name}
-Email: ${email}
-Téléphone: ${phone}
+      Nom: ${full_name}
+      Email: ${email}
+      Téléphone: ${phone}
 
-Sujet:
-${subject}
+      Sujet:
+      ${subject}
 
-Message:
-${message}
+      Message:
+      ${message}
 
-Bailleur: ${is_owner}
+      Bailleur: ${is_owner}
       `
     });
 
@@ -836,16 +845,17 @@ app.post("/budget-request", async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
       [first_name, last_name, email, phone, zone, house_type, budget, user_type, students_number, note]
     );
-    await resend.emails.send({
-      from: process.env.EMAIL_USER, // مهم
-      to: "support@sossnlogement.freshdesk.com",
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+
+      to: process.env.EMAIL_USER,
       subject: `Budget d' utilisateur  ${first_name} ${last_name}`,
       text: `
       Zone: ${zone}
       Type: ${house_type}
       Budget: ${budget}
       User: ${user_type}
-            `
+      `
       });
 
     res.json({ message: "Demande envoyée avec succès" });
@@ -882,9 +892,10 @@ app.post("/project-request", async (req, res) => {
     );
 
     // 📩 إرسال للإيميل (كما عندك)
-    await resend.emails.send({
-      from: process.env.EMAIL_USER, // مهم
-      to: "support@sossnlogement.freshdesk.com",
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+
+      to: process.env.EMAIL_USER,
       subject:  `🏗️ Projet d' un diaspora - ${full_name}`,
       text: `
       Nom: ${full_name}
@@ -942,8 +953,9 @@ app.post("/admin/reply-diaspora", auth, adminOnly, async (req, res) => {
   try {
     const { email, message } = req.body;
 
-    await resend.emails.send({
-      to: process.env.EMAIL_USER,
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
       subject: "Réponse de S.O.S LOGEMENT",
       text: message
     });
@@ -974,21 +986,22 @@ app.post("/complaints", async (req, res) => {
     );
 
     // 🔥 إرسال إلى freshdesk
-    await resend.emails.send({
-      from: process.env.EMAIL_USER, // مهم
-      to: "support@sossnlogement.freshdesk.com",
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+
+      to: process.env.EMAIL_USER,
       subject: `⚖️ Porteur du plainte ${first_name} ${last_name}`,
       text: `
-    Nom: ${first_name} ${last_name}
-    Email: ${email}
-    Tel: ${tel}
+        Nom: ${first_name} ${last_name}
+        Email: ${email}
+        Tel: ${tel}
 
-    Maison: ${house_name}
-    Lieu: ${house_location}
+        Maison: ${house_name}
+        Lieu: ${house_location}
 
-    Cause:
-    ${cause}
-          `
+        Cause:
+        ${cause}
+      `
       });
 
     res.status(201).json({ message: "Complaint sent to freshdesk ✅" });
@@ -1350,16 +1363,17 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
       ]
     );
 
-    await resend.emails.send({
+    await transporter.sendMail({
       from: process.env.EMAIL_USER,
-      to: "support@sossnlogement.freshdesk.com",
+
+      to: process.env.EMAIL_USER,
       subject: "🏠 Modification d'un bien",
       text: `
-    Un propriétaire a modifié un bien.
+      Un propriétaire a modifié un bien.
 
-    ID Bien: ${req.params.id}
+      ID Bien: ${req.params.id}
 
-    Le bien est repassé en attente de validation.
+      Le bien est repassé en attente de validation.
     `
     });
 
@@ -1612,7 +1626,7 @@ app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
         owner_sequence = $3
       WHERE id = $1
     `, [userId, ref, next]);
-    await resend.emails.send({
+    await transporter.sendMail({
       from: '"S.O.S LOGEMENT" <' + process.env.EMAIL_USER + '>',
       to: user.rows[0].email,
       subject: "Validation de votre compte propriétaire",
@@ -1949,7 +1963,7 @@ users = await pool.query(
 
 for(const user of users.rows){
 
-await resend.emails.send({
+await transporter.sendMail({
 from: process.env.EMAIL_USER,
 to: user.email,
 subject: "Message de l'administration",
@@ -1972,7 +1986,7 @@ app.post("/admin/send-one-mail", auth, adminOnly, async (req,res)=>{
 
     const { email, message } = req.body;
 
-    await resend.emails.send({
+    await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
       subject: "Message de l'administration",
