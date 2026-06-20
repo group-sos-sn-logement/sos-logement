@@ -1390,6 +1390,253 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
 });
 
 
+app.put(
+"/owner/properties/:id/hide",
+auth,
+
+async(req,res)=>{
+
+try{
+
+const property =
+await pool.query(
+`
+SELECT *
+FROM properties
+WHERE id=$1
+AND owner_id=$2
+`,
+[
+req.params.id,
+req.user.id
+]
+);
+
+if(!property.rows.length){
+return res.status(404).json({
+message:"Bien introuvable"
+});
+}
+
+await pool.query(
+`
+UPDATE properties
+SET status='hidden'
+WHERE id=$1
+`,
+[
+req.params.id
+]
+);
+
+res.json({
+message:"Bien masqué"
+});
+
+}catch(err){
+
+console.error(err);
+
+res.status(500).json({
+message:"Erreur serveur"
+});
+
+}
+
+});
+
+app.get(
+"/owner/properties-hidden",
+auth,
+
+async(req,res)=>{
+
+try{
+
+const result =
+await pool.query(
+`
+SELECT *
+FROM properties
+WHERE owner_id=$1
+AND status='hidden'
+ORDER BY id DESC
+`,
+[
+req.user.id
+]
+);
+
+res.json(
+result.rows
+);
+
+}catch(err){
+
+console.error(err);
+
+res.status(500).json({
+message:"Erreur serveur"
+});
+
+}
+
+});
+
+app.put(
+"/owner/properties/:id/restore",
+auth,
+
+async(req,res)=>{
+
+try{
+
+const property =
+await pool.query(
+`
+SELECT *
+FROM properties
+WHERE id=$1
+AND owner_id=$2
+`,
+[
+req.params.id,
+req.user.id
+]
+);
+
+if(!property.rows.length){
+
+return res.status(404).json({
+message:"Bien introuvable"
+});
+
+}
+
+await pool.query(
+`
+UPDATE properties
+SET status='approved'
+WHERE id=$1
+`,
+[
+req.params.id
+]
+);
+
+res.json({
+message:"Bien republié"
+});
+
+}catch(err){
+
+console.error(err);
+
+res.status(500).json({
+message:"Erreur serveur"
+});
+
+}
+
+});
+
+app.delete(
+"/owner/properties/:id/delete-confirm",
+
+auth,
+
+async(req,res)=>{
+
+try{
+
+const {
+password
+}
+=
+req.body;
+
+const user =
+await pool.query(
+`
+SELECT password
+FROM users
+WHERE id=$1
+`,
+[
+req.user.id
+]
+);
+
+const ok =
+await bcrypt.compare(
+password,
+user.rows[0].password
+);
+
+if(!ok){
+
+return res.status(403).json({
+message:
+"Mot de passe incorrect"
+});
+
+}
+
+const property =
+await pool.query(
+`
+SELECT *
+FROM properties
+WHERE id=$1
+AND owner_id=$2
+`,
+[
+req.params.id,
+req.user.id
+]
+);
+
+if(
+!property.rows.length
+){
+
+return res.status(404).json({
+message:
+"Bien introuvable"
+});
+
+}
+
+await pool.query(
+`
+DELETE
+FROM properties
+WHERE id=$1
+`,
+[
+req.params.id
+]
+);
+
+res.json({
+message:
+"Bien supprimé"
+});
+
+}catch(err){
+
+console.error(err);
+
+res.status(500).json({
+message:
+"Erreur serveur"
+});
+
+}
+
+});
+
+
 /* =========================
    DELETE OWNER PROPERTY
 ========================= */
