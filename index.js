@@ -114,7 +114,6 @@ app.get("/verify-token", auth, (req, res) => {
   });
 });
 
-const nodemailer = require("nodemailer");
 
 const nodemailer = require("nodemailer");
 
