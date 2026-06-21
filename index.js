@@ -3,6 +3,9 @@ const app = express();
 const hotelRoutes = require("./routes/hotelRoutes");
 require("dotenv").config();
 
+console.log("EMAIL:", process.env.EMAIL_USER);
+console.log("PASS EXISTS:", !!process.env.EMAIL_PASS);
+
 const adminHotelRoutes =
 require("./routes/adminHotelRoutes");
 
@@ -119,23 +122,16 @@ const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
 
-  host: "smtp.gmail.com",
-
-  port: 587,
-
-  secure: false, // ← مهم جداً
-
-  requireTLS: true,
+  service: "gmail",
 
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   },
 
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000
+  family: 4,
 
+  connectionTimeout: 30000
 });
 let visitors = 0;
 
