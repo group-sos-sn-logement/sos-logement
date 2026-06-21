@@ -117,18 +117,22 @@ app.get("/verify-token", auth, (req, res) => {
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+    service: "gmail",
 
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
-
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
 });
 let visitors = 0;
+
+transporter.verify(function(error, success) {
+  if (error) {
+    console.log("SMTP ERROR:", error);
+  } else {
+    console.log("SMTP READY");
+  }
+});
 
 app.use((req, res, next) => {
   const safeBody = { ...req.body };
@@ -211,6 +215,9 @@ app.use("/hotels", hotelRoutes);
 app.post("/contact", async (req, res) => {
   try {
     const { full_name, email, phone, subject, message, is_owner } = req.body;
+
+    await transporter.verify();
+console.log("SMTP CONNECTED");
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
@@ -847,6 +854,9 @@ app.post("/budget-request", async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
       [first_name, last_name, email, phone, zone, house_type, budget, user_type, students_number, note]
     );
+
+    await transporter.verify();
+    console.log("SMTP CONNECTED");
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
 
@@ -893,6 +903,12 @@ app.post("/project-request", async (req, res) => {
       [full_name, email, phone, country, project_type, budget, land_status, ideas]
     );
 
+    await transporter.verify();
+    console.log("SMTP CONNECTED");
+
+
+    await transporter.verify();
+console.log("SMTP CONNECTED");
     // 📩 إرسال للإيميل (كما عندك)
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
@@ -955,6 +971,9 @@ app.post("/admin/reply-diaspora", auth, adminOnly, async (req, res) => {
   try {
     const { email, message } = req.body;
 
+
+    await transporter.verify();
+console.log("SMTP CONNECTED");
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
@@ -986,6 +1005,9 @@ app.post("/complaints", async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
       [first_name, last_name, email, tel, house_name, house_location, cause]
     );
+
+    await transporter.verify();
+console.log("SMTP CONNECTED");
 
     // 🔥 إرسال إلى freshdesk
     await transporter.sendMail({
@@ -1364,6 +1386,8 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
         req.params.id
       ]
     );
+    await transporter.verify();
+console.log("SMTP CONNECTED");
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
@@ -1875,6 +1899,9 @@ app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
         owner_sequence = $3
       WHERE id = $1
     `, [userId, ref, next]);
+
+    await transporter.verify();
+console.log("SMTP CONNECTED");
     await transporter.sendMail({
       from: '"S.O.S LOGEMENT" <' + process.env.EMAIL_USER + '>',
       to: user.rows[0].email,
@@ -2212,6 +2239,8 @@ users = await pool.query(
 
 for(const user of users.rows){
 
+  await transporter.verify();
+console.log("SMTP CONNECTED");
 await transporter.sendMail({
 from: process.env.EMAIL_USER,
 to: user.email,
@@ -2234,6 +2263,9 @@ app.post("/admin/send-one-mail", auth, adminOnly, async (req,res)=>{
   try{
 
     const { email, message } = req.body;
+
+    await transporter.verify();
+console.log("SMTP CONNECTED");
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
