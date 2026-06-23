@@ -1,3 +1,6 @@
+const dns = require("dns");
+dns.setDefaultResultOrder("ipv4first");
+
 const express = require("express");
 const app = express();
 const hotelRoutes = require("./routes/hotelRoutes");
@@ -123,14 +126,16 @@ const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
   service: "gmail",
   host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false, // مهم جدًا مع 587
   auth: {
     user: process.env.EMAIL,
     pass: process.env.EMAIL_APP_PASSWORD,
   },
-  family: 4 // 🔥 هذا الحل السحري للمشكلة
 });
+
+
+
 transporter.verify((err)=>{
 
 if(err){
@@ -143,15 +148,6 @@ console.log("SMTP READY ✅");
 
 }
 
-});
-
-
-transporter.verify(function(error, success) {
-  if (error) {
-    console.log("SMTP ERROR:", error);
-  } else {
-    console.log("SMTP READY");
-  }
 });
 
 app.use((req, res, next) => {
@@ -991,7 +987,7 @@ app.post("/admin/reply-diaspora", auth, adminOnly, async (req, res) => {
 
     
     await transporter.sendMail({
-      from: process.env.EMAI,
+      from: process.env.EMAIL,
       to: email,
       subject: "Réponse de S.O.S LOGEMENT",
       text: message
