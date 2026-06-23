@@ -120,20 +120,30 @@ app.get("/verify-token", auth, (req, res) => {
 
 const nodemailer = require("nodemailer");
 
-const transporter =
-nodemailer.createTransport({
+const transporter = nodemailer.createTransport({
 
 service: "gmail",
 
-auth:{
+auth: {
 user: process.env.EMAIL_USER,
 pass: process.env.EMAIL_PASS
-},
-
-connectionTimeout:30000
+}
 
 });
-let visitors = 0;
+
+transporter.verify((err)=>{
+
+if(err){
+
+console.log("SMTP ERROR:", err);
+
+}else{
+
+console.log("SMTP READY ✅");
+
+}
+
+});
 
 
 transporter.verify(function(error, success) {
@@ -156,6 +166,9 @@ app.use((req, res, next) => {
   next(); // مهم جداً
 });
 console.log("DIR NAME:", __dirname);
+
+
+let visitors = 0;
 
 
 // Middleware لطباعة كل request body
