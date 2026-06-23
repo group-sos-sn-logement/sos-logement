@@ -3,8 +3,8 @@ const app = express();
 const hotelRoutes = require("./routes/hotelRoutes");
 require("dotenv").config();
 
-console.log("EMAIL:", process.env.EMAIL_USER);
-console.log("PASS EXISTS:", !!process.env.EMAIL_PASS);
+console.log("EMAIL:", process.env.EMAIL);
+console.log("PASS EXISTS:", !!process.env.EMAIL_APP_PASSWORD);
 
 const adminHotelRoutes =
 require("./routes/adminHotelRoutes");
@@ -121,14 +121,11 @@ app.get("/verify-token", auth, (req, res) => {
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-
-service: "gmail",
-
-auth: {
-user: process.env.EMAIL_USER,
-pass: process.env.EMAIL_PASS
-}
-
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL,
+    pass: process.env.EMAIL_APP_PASSWORD,
+  },
 });
 
 transporter.verify((err)=>{
@@ -244,10 +241,10 @@ app.post("/contact", async (req, res) => {
     
 
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: email,
 
-      to: process.env.EMAIL_USER,
-      subject: `📩 Contactez-nous ${full_name}`,
+      to: process.env.EMAIL,
+      subject: `📩 Contactez-nous - Nouveau message de ${full_name}`,
       text: `
       Nom: ${full_name}
       Email: ${email}
@@ -881,9 +878,9 @@ app.post("/budget-request", async (req, res) => {
 
     
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-
-      to: process.env.EMAIL_USER,
+      from: email,
+      
+      to: process.env.EMAIL,
       subject: `Budget d' utilisateur  ${first_name} ${last_name}`,
       text: `
       Zone: ${zone}
@@ -928,9 +925,9 @@ app.post("/project-request", async (req, res) => {
 
     // 📩 إرسال للإيميل (كما عندك)
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-
-      to: process.env.EMAIL_USER,
+      from: email,
+      
+      to: process.env.EMAIL,
       subject:  `🏗️ Projet d' un diaspora - ${full_name}`,
       text: `
       Nom: ${full_name}
@@ -991,7 +988,7 @@ app.post("/admin/reply-diaspora", auth, adminOnly, async (req, res) => {
 
     
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: process.env.EMAI,
       to: email,
       subject: "Réponse de S.O.S LOGEMENT",
       text: message
@@ -1025,9 +1022,9 @@ app.post("/complaints", async (req, res) => {
 
     // 🔥 إرسال إلى freshdesk
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-
-      to: process.env.EMAIL_USER,
+      from: email,
+      
+      to: process.env.EMAIL,
       subject: `⚖️ Porteur du plainte ${first_name} ${last_name}`,
       text: `
         Nom: ${first_name} ${last_name}
@@ -1401,9 +1398,9 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
       ]
     );
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-
-      to: process.env.EMAIL_USER,
+      from: email,
+      
+      to: process.env.EMAIL,
       subject: "🏠 Modification d'un bien",
       text: `
       Un propriétaire a modifié un bien.
@@ -1911,7 +1908,7 @@ app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
       WHERE id = $1
     `, [userId, ref, next]);
     await transporter.sendMail({
-      from: '"S.O.S LOGEMENT" <' + process.env.EMAIL_USER + '>',
+      from: '"S.O.S LOGEMENT" <' + process.env.EMAIL+ '>',
       to: user.rows[0].email,
       subject: "Validation de votre compte propriétaire",
       html: `
@@ -2247,7 +2244,7 @@ users = await pool.query(
 
 for(const user of users.rows){
 await transporter.sendMail({
-from: process.env.EMAIL_USER,
+from: process.env.EMAIL,
 to: user.email,
 subject: "Message de l'administration",
 html: `<p>${message}</p>`
@@ -2269,7 +2266,7 @@ app.post("/admin/send-one-mail", auth, adminOnly, async (req,res)=>{
 
     const { email, message } = req.body;
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: process.env.EMAIL,
       to: email,
       subject: "Message de l'administration",
       html: `<p>${message}</p>`
