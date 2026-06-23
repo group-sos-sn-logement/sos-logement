@@ -120,26 +120,35 @@ app.get("/verify-token", auth, (req, res) => {
 
 const nodemailer = require("nodemailer");
 
-const transporter = nodemailer.createTransport({
+const dns = require("dns");
 
-  host: "smtp.gmail.com",
+dns.setDefaultResultOrder("ipv4first");
 
-  port: 587,
+const transporter =
+nodemailer.createTransport({
 
-  secure: false,
+host: "smtp.gmail.com",
 
-  family: 4,
+port: 587,
 
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
+secure: false,
 
-  tls: {
-    rejectUnauthorized: false
-  },
+requireTLS: true,
 
-  connectionTimeout: 10000
+auth: {
+user: process.env.EMAIL_USER,
+pass: process.env.EMAIL_PASS
+},
+
+connectionTimeout: 30000,
+greetingTimeout: 30000,
+socketTimeout: 30000,
+
+tls: {
+family: 4,
+rejectUnauthorized: false
+}
+
 });
 let visitors = 0;
 
