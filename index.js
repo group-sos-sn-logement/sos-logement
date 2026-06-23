@@ -122,16 +122,24 @@ const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
 
-  service: "gmail",
+  host: "smtp.gmail.com",
+
+  port: 587,
+
+  secure: false,
+
+  family: 4,
 
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   },
 
-  family: 4,
+  tls: {
+    rejectUnauthorized: false
+  },
 
-  connectionTimeout: 30000
+  connectionTimeout: 10000
 });
 let visitors = 0;
 
@@ -223,6 +231,8 @@ app.set('trust proxy', 1);
 app.use("/hotels", hotelRoutes);
 
 app.post("/contact", async (req, res) => {
+  console.log("CONTACT DATA:", req.body);
+
   try {
     const { full_name, email, phone, subject, message, is_owner } = req.body;
 
