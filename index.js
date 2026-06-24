@@ -131,13 +131,16 @@ const transporter = nodemailer.createTransport({
   port: 465,
   secure: true,
 
+    name: "sos-logement.onrender.com",
+  
+
   auth: {
     user: process.env.EMAIL,
     pass: process.env.EMAIL_APP_PASSWORD
   }
 });
 
-transporter.verify(function(error){
+/*transporter.verify(function(error){
 
 if(error){
 
@@ -149,7 +152,7 @@ console.log("SMTP READY ✅");
 
 }
 
-});
+});*/
 
 
 
