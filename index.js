@@ -111,6 +111,9 @@ const limiter = rateLimit({
   max: 100
 });
 
+app.set('trust proxy', 1);
+
+
 app.use(limiter);
 
 app.get("/verify-token", auth, (req, res) => {
@@ -143,7 +146,24 @@ transporter.verify((err)=>{
 
 if(err){
 
-console.log("SMTP ERROR:", err);
+transporter.verify((err)=>{
+
+if(err){
+
+console.error(err);
+
+console.log(err.code);
+
+console.log(err.response);
+
+}
+else{
+
+console.log("SMTP READY ✅");
+
+}
+
+});
 
 }else{
 
@@ -231,7 +251,6 @@ async function generateGlobalPropertyCode(userId){
     return `${ownerRef}-${sequence}`;
 }
 
-app.set('trust proxy', 1);
 app.use("/hotels", hotelRoutes);
 
 app.post("/contact", async (req, res) => {
@@ -243,7 +262,9 @@ app.post("/contact", async (req, res) => {
     
 
     await transporter.sendMail({
-      from: email,
+      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+
+      replyTo: email,
 
       to: process.env.EMAIL,
       subject: `📩 Contactez-nous - Nouveau message de ${full_name}`,
@@ -880,8 +901,10 @@ app.post("/budget-request", async (req, res) => {
 
     
     await transporter.sendMail({
-      from: email,
-      
+      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+
+      replyTo: email,
+
       to: process.env.EMAIL,
       subject: `Budget d' utilisateur  ${first_name} ${last_name}`,
       text: `
@@ -927,8 +950,10 @@ app.post("/project-request", async (req, res) => {
 
     // 📩 إرسال للإيميل (كما عندك)
     await transporter.sendMail({
-      from: email,
-      
+      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+
+      replyTo: email,
+
       to: process.env.EMAIL,
       subject:  `🏗️ Projet d' un diaspora - ${full_name}`,
       text: `
@@ -990,8 +1015,11 @@ app.post("/admin/reply-diaspora", auth, adminOnly, async (req, res) => {
 
     
     await transporter.sendMail({
-      from: process.env.EMAIL,
-      to: email,
+      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+
+      replyTo: email,
+
+      to: process.env.EMAIL,
       subject: "Réponse de S.O.S LOGEMENT",
       text: message
     });
@@ -1024,8 +1052,10 @@ app.post("/complaints", async (req, res) => {
 
     // 🔥 إرسال إلى freshdesk
     await transporter.sendMail({
-      from: email,
-      
+      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+
+      replyTo: email,
+
       to: process.env.EMAIL,
       subject: `⚖️ Porteur du plainte ${first_name} ${last_name}`,
       text: `
@@ -1400,8 +1430,10 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
       ]
     );
     await transporter.sendMail({
-      from: email,
-      
+      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+
+      replyTo: email,
+
       to: process.env.EMAIL,
       subject: "🏠 Modification d'un bien",
       text: `
@@ -2246,8 +2278,11 @@ users = await pool.query(
 
 for(const user of users.rows){
 await transporter.sendMail({
-from: process.env.EMAIL,
-to: user.email,
+      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+
+      replyTo: email,
+
+      to: process.env.EMAIL,
 subject: "Message de l'administration",
 html: `<p>${message}</p>`
 });
@@ -2268,8 +2303,11 @@ app.post("/admin/send-one-mail", auth, adminOnly, async (req,res)=>{
 
     const { email, message } = req.body;
     await transporter.sendMail({
-      from: process.env.EMAIL,
-      to: email,
+      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+
+      replyTo: email,
+
+      to: process.env.EMAIL,
       subject: "Message de l'administration",
       html: `<p>${message}</p>`
     });
