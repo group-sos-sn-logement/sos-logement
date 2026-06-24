@@ -126,44 +126,32 @@ app.get("/verify-token", auth, (req, res) => {
 
 const nodemailer = require("nodemailer");
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.EMAIL_APP_PASSWORD,
-  },
-  tls: {
-    rejectUnauthorized: false
-  },
-  connectionTimeout: 10000
+const transporter =
+nodemailer.createTransport({
+
+host: "smtp.gmail.com",
+
+port: 465,
+
+secure: true,
+
+family: 4,
+
+auth: {
+
+user: process.env.EMAIL,
+
+pass: process.env.EMAIL_APP_PASSWORD
+
+}
+
 });
-
-
 
 transporter.verify((err)=>{
 
 if(err){
 
-transporter.verify((err)=>{
-
-if(err){
-
-console.error(err);
-
-console.log(err.code);
-
-console.log(err.response);
-
-}
-else{
-
-console.log("SMTP READY ✅");
-
-}
-
-});
+console.error("SMTP ERROR:", err);
 
 }else{
 
@@ -172,6 +160,7 @@ console.log("SMTP READY ✅");
 }
 
 });
+
 
 app.use((req, res, next) => {
   const safeBody = { ...req.body };
