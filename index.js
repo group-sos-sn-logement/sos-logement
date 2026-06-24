@@ -355,6 +355,93 @@ app.get("/property/:code", async (req, res) => {
   }
 });
 
+
+app.get(
+"/owner/search-properties",
+auth,
+
+async(req,res)=>{
+
+try{
+
+const q =
+(req.query.q || "")
+.trim();
+
+const search =
+`%${q}%`;
+
+const result =
+await pool.query(
+`
+SELECT
+id,
+property_code,
+title,
+city,
+price,
+type,
+status
+
+FROM properties
+
+WHERE owner_id=$1
+
+AND (
+
+LOWER(
+COALESCE(property_code,'')
+)
+LIKE LOWER($2)
+
+OR
+
+LOWER(
+COALESCE(city,'')
+)
+LIKE LOWER($2)
+
+OR
+
+LOWER(
+COALESCE(type,'')
+)
+LIKE LOWER($2)
+
+OR
+
+CAST(
+price AS TEXT
+)
+LIKE $2
+
+)
+
+ORDER BY id DESC
+`,
+[
+req.user.id,
+search
+]
+);
+
+res.json(
+result.rows
+);
+
+}catch(err){
+
+console.error(err);
+
+res.status(500).json({
+message:
+"Erreur serveur"
+});
+
+}
+
+});
+
 /* =========================
    ADD PROPERTY
 ========================= */
