@@ -128,38 +128,42 @@ const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
 
-host: "smtp.gmail.com",
+host: "74.125.133.108", // smtp.gmail.com IPv4
 
 port: 587,
 
-secure: false, // مهم جداً
+secure: false,
 
 requireTLS: true,
 
 auth: {
-  user: process.env.EMAIL,
-  pass: process.env.EMAIL_APP_PASSWORD
+user: process.env.EMAIL,
+pass: process.env.EMAIL_APP_PASSWORD
 },
 
+family: 4,
+
 connectionTimeout: 60000,
+
 greetingTimeout: 60000,
+
 socketTimeout: 60000,
 
 tls: {
-  family: 4, // يجبر IPv4
-  rejectUnauthorized: false
+servername: "smtp.gmail.com",
+rejectUnauthorized: false
 }
 
 });
 
 
-transporter.verify((err, success) => {
+transporter.verify(function(error){
 
-if (err) {
+if(error){
 
-console.error("SMTP ERROR:", err);
+console.log("SMTP VERIFY ERROR:", error);
 
-} else {
+}else{
 
 console.log("SMTP READY ✅");
 
