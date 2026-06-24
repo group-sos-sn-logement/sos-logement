@@ -127,20 +127,34 @@ app.get("/verify-token", auth, (req, res) => {
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
 
-    name: "sos-logement.onrender.com",
-  
+  service: "gmail",
+
+  host: "smtp.gmail.com",
+
+  port: 587,
+
+  secure: false,
+
+  family: 4, // ← يجبر IPv4
 
   auth: {
     user: process.env.EMAIL,
     pass: process.env.EMAIL_APP_PASSWORD
-  }
+  },
+
+  tls: {
+    rejectUnauthorized: false
+  },
+
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000
+
 });
 
-/*transporter.verify(function(error){
+
+transporter.verify((error) => {
 
 if(error){
 
@@ -152,8 +166,7 @@ console.log("SMTP READY ✅");
 
 }
 
-});*/
-
+});
 
 
 
