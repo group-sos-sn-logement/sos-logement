@@ -291,38 +291,99 @@ app.post("/contact", async (req, res) => {
 app.get("/properties", async (req, res) => {
   try {
 
-    const result = await pool.query(`
-    SELECT
-      p.property_code,
-      p.title,
-      p.type,
-      p.description,
-      p.city,
-      p.price,
-      p.chambres,
-      p.cuisine,
-      p.sdb,
-      p.salon,
-      p.is_student,
-      p.max_students,
+    // الصفحة الحالية
+    const page =
+      parseInt(req.query.page) || 1;
 
-      ARRAY(
-        SELECT image_url
-        FROM property_images
-        WHERE property_id = p.id
-        LIMIT 1
-      ) AS cover_image
+    // عدد العقارات
+    const limit =
+      Math.min(
+        parseInt(req.query.limit) || 12,
+        50
+      );
 
-    FROM properties p
-    WHERE p.status = 'approved'
-    ORDER BY p.id DESC
-  `);
+    const offset =
+      (page - 1) * limit;
 
-    res.json(result.rows);
+    // إجمالي العقارات
+    const totalResult =
+      await pool.query(`
+        SELECT COUNT(*)
+        FROM properties
+        WHERE status='approved'
+      `);
+
+    const total =
+      parseInt(
+        totalResult.rows[0].count
+      );
+
+    // جلب الصفحة فقط
+    const result =
+      await pool.query(`
+        SELECT
+          p.id,
+          p.property_code,
+          p.title,
+          p.type,
+          p.description,
+          p.city,
+          p.price,
+          p.chambres,
+          p.cuisine,
+          p.sdb,
+          p.salon,
+          p.is_student,
+          p.max_students,
+
+          ARRAY(
+            SELECT image_url
+            FROM property_images
+            WHERE property_id=p.id
+            LIMIT 1
+          ) AS cover_image
+
+        FROM properties p
+
+        WHERE p.status='approved'
+
+        ORDER BY p.id DESC
+
+        LIMIT $1
+        OFFSET $2
+      `,
+      [
+        limit,
+        offset
+      ]);
+
+    res.json({
+
+      page,
+
+      limit,
+
+      total,
+
+      totalPages:
+        Math.ceil(
+          total / limit
+        ),
+
+      properties:
+        result.rows
+
+    });
 
   } catch (err) {
+
     console.error(err);
-    res.status(500).json({ message: "Erreur serveur" });
+
+    res.status(500).json({
+      message:
+      "Erreur serveur"
+    });
+
   }
 });
 
