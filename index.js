@@ -2413,32 +2413,58 @@ const { message, role } = req.body;
 let users;
 
 if(role === "all"){
-users = await pool.query("SELECT email FROM users");
+users =
+await pool.query(
+"SELECT email FROM users"
+);
 }else{
-users = await pool.query(
-"SELECT email FROM users WHERE role = $1",
+users =
+await pool.query(
+"SELECT email FROM users WHERE role=$1",
 [role]
 );
 }
 
 for(const user of users.rows){
+
 await transporter.sendMail({
-      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
-      replyTo: email,
+from:
+`"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
-      to: process.env.EMAIL,
-subject: "Message de l'administration",
-html: `<p>${message}</p>`
+replyTo:
+process.env.EMAIL,
+
+to:
+user.email,
+
+subject:
+"Message de l'administration",
+
+html:
+`<p>${message}</p>`
+
 });
 
 }
 
-res.json({message:"Emails envoyés"});
+res.json({
+message:
+"Emails envoyés"
+});
 
 }catch(err){
-console.error(err);
-res.status(500).json({message:"Erreur serveur"});
+
+console.error(
+"SEND MAIL ERROR:",
+err
+);
+
+res.status(500).json({
+message:
+"Erreur serveur"
+});
+
 }
 
 });
@@ -2450,9 +2476,9 @@ app.post("/admin/send-one-mail", auth, adminOnly, async (req,res)=>{
     await transporter.sendMail({
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
-      replyTo: email,
+      replyTo: process.env.EMAIL,
 
-      to: process.env.EMAIL,
+      to: email,
       subject: "Message de l'administration",
       html: `<p>${message}</p>`
     });
