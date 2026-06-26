@@ -125,30 +125,59 @@ app.get("/verify-token", auth, (req, res) => {
   });
 });
 
+const dns = require("dns");
+
+dns.lookup = (
+hostname,
+options,
+callback
+)=>{
+
+if(typeof options==="function"){
+callback=options;
+options={};
+}
+
+return dns.resolve4(
+hostname,
+(err,addresses)=>{
+
+if(err){
+return callback(err);
+}
+
+callback(
+null,
+addresses[0],
+4
+);
+
+});
+
+};
 
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
 
-service: "gmail",
+host: "smtp.gmail.com",
+
+port: 587,
+
+secure: false,
 
 auth: {
 user: process.env.EMAIL,
 pass: process.env.EMAIL_APP_PASSWORD
 },
 
-connectionTimeout: 30000,
-greetingTimeout: 30000,
-socketTimeout: 30000,
+ignoreTLS: false,
 
 tls: {
 rejectUnauthorized: false
-},
-
-dnsTimeout: 30000
+}
 
 });
-
 transporter.verify((error) => {
 
 if(error){
