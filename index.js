@@ -1,10 +1,12 @@
 const dns = require("dns");
 dns.setDefaultResultOrder("ipv4first");
 
+require("dotenv").config();
+
 const express = require("express");
 const app = express();
+
 const hotelRoutes = require("./routes/hotelRoutes");
-require("dotenv").config();
 
 console.log("EMAIL:", process.env.EMAIL);
 console.log("PASS EXISTS:", !!process.env.EMAIL_APP_PASSWORD);
@@ -128,32 +130,27 @@ const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
 
-  service: "gmail",
+host: "smtp.gmail.com",
 
-  host: "smtp.gmail.com",
+port: 587,
 
-  port: 587,
+secure: false,
 
-  secure: false,
+requireTLS: true,
 
-  family: 4, // ← يجبر IPv4
+auth: {
+user: process.env.EMAIL,
+pass: process.env.EMAIL_APP_PASSWORD
+},
 
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.EMAIL_APP_PASSWORD
-  },
-
-  tls: {
-    rejectUnauthorized: false
-  },
-
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000
+tls: {
+family: 4,
+rejectUnauthorized: false
+}
 
 });
 
-
+/*
 transporter.verify((error) => {
 
 if(error){
@@ -167,7 +164,7 @@ console.log("SMTP READY ✅");
 }
 
 });
-
+*/
 
 
 app.use((req, res, next) => {
