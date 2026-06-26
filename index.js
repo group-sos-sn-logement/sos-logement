@@ -1,3 +1,6 @@
+const dns = require("dns");
+dns.setDefaultResultOrder("ipv4first");
+
 require("dotenv").config();
 
 const express = require("express");
@@ -122,59 +125,19 @@ app.get("/verify-token", auth, (req, res) => {
   });
 });
 
-const dns = require("dns");
 
-dns.lookup = (
-hostname,
-options,
-callback
-)=>{
-
-if(typeof options==="function"){
-callback=options;
-options={};
-}
-
-return dns.resolve4(
-hostname,
-(err,addresses)=>{
-
-if(err){
-return callback(err);
-}
-
-callback(
-null,
-addresses[0],
-4
-);
-
-});
-
-};
 
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
+  service: "gmail",
 
-host: "smtp.gmail.com",
-
-port: 587,
-
-secure: false,
-
-auth: {
-user: process.env.EMAIL,
-pass: process.env.EMAIL_APP_PASSWORD
-},
-
-ignoreTLS: false,
-
-tls: {
-rejectUnauthorized: false
-}
-
+  auth: {
+    user: process.env.EMAIL,
+    pass: process.env.EMAIL_APP_PASSWORD
+  }
 });
+
 transporter.verify((error) => {
 
 if(error){
@@ -280,8 +243,6 @@ app.post("/contact", async (req, res) => {
 
     await transporter.sendMail({
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
-
-      replyTo: email,
 
       to: process.env.EMAIL,
       subject: `📩 Contactez-nous - Nouveau message de ${full_name}`,
@@ -1068,7 +1029,6 @@ app.post("/budget-request", async (req, res) => {
     await transporter.sendMail({
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
-      replyTo: email,
 
       to: process.env.EMAIL,
       subject: `Budget d' utilisateur  ${first_name} ${last_name}`,
@@ -1117,7 +1077,6 @@ app.post("/project-request", async (req, res) => {
     await transporter.sendMail({
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
-      replyTo: email,
 
       to: process.env.EMAIL,
       subject:  `🏗️ Projet d' un diaspora - ${full_name}`,
@@ -1182,7 +1141,6 @@ app.post("/admin/reply-diaspora", auth, adminOnly, async (req, res) => {
     await transporter.sendMail({
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
-      replyTo: email,
 
       to: process.env.EMAIL,
       subject: "Réponse de S.O.S LOGEMENT",
@@ -1219,7 +1177,6 @@ app.post("/complaints", async (req, res) => {
     await transporter.sendMail({
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
-      replyTo: email,
 
       to: process.env.EMAIL,
       subject: `⚖️ Porteur du plainte ${first_name} ${last_name}`,
@@ -1597,7 +1554,6 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
     await transporter.sendMail({
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
-      replyTo: email,
 
       to: process.env.EMAIL,
       subject: "🏠 Modification d'un bien",
@@ -2452,11 +2408,8 @@ await transporter.sendMail({
 from:
 `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
-replyTo:
-process.env.EMAIL,
-
 to:
-user.email,
+user.process.env.EMAIL,
 
 subject:
 "Message de l'administration",
@@ -2496,9 +2449,8 @@ app.post("/admin/send-one-mail", auth, adminOnly, async (req,res)=>{
     await transporter.sendMail({
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
-      replyTo: process.env.EMAIL,
 
-      to: email,
+      to: process.env.EMAIL,
       subject: "Message de l'administration",
       html: `<p>${message}</p>`
     });
