@@ -1028,15 +1028,23 @@ app.post("/budget-request", async (req, res) => {
     
     await transporter.sendMail({
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
-
-
       to: process.env.EMAIL,
+
+      replyTo: email,
+
       subject: `Budget d' utilisateur  ${first_name} ${last_name}`,
       text: `
+      Nom: ${first_name} ${last_name}
+      Email: ${email}
+      Téléphone: ${phone}
+
       Zone: ${zone}
       Type: ${house_type}
       Budget: ${budget}
-      User: ${user_type}
+      Utilisateur: ${user_type}
+
+      Étudiants: ${students_number}
+      Note: ${note}
       `
       });
 
