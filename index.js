@@ -130,27 +130,31 @@ const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
 
+service: "gmail",
+
 host: "smtp.gmail.com",
 
-port: 587,
+port: 465,
 
-secure: false,
-
-requireTLS: true,
+secure: true,
 
 auth: {
 user: process.env.EMAIL,
 pass: process.env.EMAIL_APP_PASSWORD
 },
 
-tls: {
 family: 4,
+
+tls: {
 rejectUnauthorized: false
-}
+},
+
+connectionTimeout: 15000,
+greetingTimeout: 15000,
+socketTimeout: 15000
 
 });
 
-/*
 transporter.verify((error) => {
 
 if(error){
@@ -164,7 +168,6 @@ console.log("SMTP READY ✅");
 }
 
 });
-*/
 
 
 app.use((req, res, next) => {
