@@ -2417,7 +2417,7 @@ from:
 `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
 to:
-user.process.env.EMAIL,
+user.email,
 
 subject:
 "Message de l'administration",
