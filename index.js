@@ -316,6 +316,7 @@ app.get("/properties", async (req, res) => {
           p.salon,
           p.is_student,
           p.max_students,
+          p.commission,
 
           ARRAY(
             SELECT image_url
@@ -571,7 +572,7 @@ app.post("/properties", auth, async (req, res) => {
     }
 
     const ownerId = req.user.id;
-    const { title, type, description, city, exact_location, price, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2 } = req.body;
+    const { title, type, description, city, exact_location, price, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2, commission } = req.body;
 
     const owner = await pool.query(
       "SELECT owner_ref FROM users WHERE id = $1",
@@ -612,10 +613,10 @@ app.post("/properties", auth, async (req, res) => {
     }
     const result = await pool.query(
       `INSERT INTO properties 
-       (owner_id, property_code, title, type, description, city, exact_location, price, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, 'pending')
+       (owner_id, property_code, title, type, description, city, exact_location, price, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2, commission, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16, 'pending')
        RETURNING *`,
-      [ownerId, propertyCode, title, type, description, city, exact_location, cleanedPrice, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2]
+      [ownerId, propertyCode, title, type, description, city, exact_location, cleanedPrice, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2, commission ]
     );
     res.json({ message: "Bien ajouté", property: result.rows[0] });
 
@@ -1388,6 +1389,7 @@ app.get("/admin/properties", auth, adminOnly, async (req, res) => {
         u.phone,
         u.owner_ref,
         u.email,
+        p.commission,
 
         (
           SELECT json_agg(
@@ -1521,7 +1523,8 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
       salon,
       is_student,
       max_students,
-      surface_m2
+      surface_m2,
+      commission
     } = req.body;
 
     await pool.query(
@@ -1540,8 +1543,9 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
          is_student=$11,
          max_students=$12,
          surface_m2=$13,
+         commission=$14,
          status='pending'  
-       WHERE id=$14`,
+       WHERE id=$15`,
       [
         title,
         type,
@@ -1556,6 +1560,7 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
         is_student,
         max_students,
         surface_m2,
+        commission,         
         req.params.id
       ]
     );
@@ -2215,6 +2220,7 @@ app.get("/admin/properties-approved", auth, adminOnly, async (req,res)=>{
         u.phone,
         u.owner_ref,
         u.email,
+        p.commission,
 
         (
           SELECT json_agg(
@@ -2256,6 +2262,7 @@ app.get("/admin/properties-hidden", auth, adminOnly, async (req,res)=>{
         u.phone,
         u.owner_ref,
         u.email,
+        p.commission,
 
         (
           SELECT json_agg(
