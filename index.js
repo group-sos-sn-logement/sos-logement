@@ -767,9 +767,9 @@ app.post("/register-owner",
     }
 
     try {
-      const { first_name, last_name, email, phone, password, conditions, commission } = req.body;
+      const { first_name, last_name, email, phone, password } = req.body;
 
-      if (!first_name || !last_name || !email || !phone || !password || !conditions || !commission) {
+      if (!first_name || !last_name || !email || !phone || !password) {
         return res.status(400).json({ message: "Tous les champs sont obligatoires" });
       }
       // 🔍 تحقق من وجود المستخدم
@@ -788,9 +788,9 @@ app.post("/register-owner",
       // 🆕 إنشاء owner (غير مُوافق عليه)
       await pool.query(`
         INSERT INTO users 
-        (first_name, last_name, email, phone, password, role, approved, owner_request, conditions, commission)
-        VALUES ($1,$2,$3,$4,$5,'owner',false,true,$6,$7)
-      `, [first_name, last_name, email, phone, hashed, conditions, commission]);
+        (first_name, last_name, email, phone, password, role, approved, owner_request)
+        VALUES ($1,$2,$3,$4,$5,'owner',false,true)
+      `, [first_name, last_name, email, phone, hashed]);
 
       res.json({ message: "Compte propriétaire créé (en attente de validation)" });
 
