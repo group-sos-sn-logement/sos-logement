@@ -273,18 +273,12 @@ app.get("/properties", async (req, res) => {
   try {
 
     // الصفحة الحالية
-    const page =
-      parseInt(req.query.page) || 1;
+    const limit = Math.min(
+      Number(req.query.limit) || 20,
+      50
+    );
 
-    // عدد العقارات
-    const limit =
-      Math.min(
-        parseInt(req.query.limit) || 12,
-        50
-      );
-
-    const offset =
-      (page - 1) * limit;
+    const cursor = Number(req.query.cursor) || null;
 
     // إجمالي العقارات
     const totalResult =
@@ -300,74 +294,74 @@ app.get("/properties", async (req, res) => {
       );
 
     // جلب الصفحة فقط
-    const result =
-      await pool.query(`
-        SELECT
-          p.id,
-          p.property_code,
-          p.title,
-          p.type,
-          p.description,
-          p.city,
-          p.price,
-          p.chambres,
-          p.cuisine,
-          p.sdb,
-          p.salon,
-          p.is_student,
-          p.max_students,
-          p.commission,
+      let query = `
+SELECT
+    p.id,
+    p.property_code,
+    p.title,
+    p.type,
+    p.description,
+    p.city,
+    p.price,
+    p.chambres,
+    p.cuisine,
+    p.sdb,
+    p.salon,
+    p.is_student,
+    p.max_students,
+    p.commission,
 
-          ARRAY(
-            SELECT image_url
-            FROM property_images
-            WHERE property_id=p.id
-            LIMIT 1
-          ) AS cover_image
+    img.cover_image
 
-        FROM properties p
+FROM properties p
 
-        WHERE p.status='approved'
+LEFT JOIN LATERAL (
 
-        ORDER BY p.id DESC
+    SELECT ARRAY[image_url] AS cover_image
 
-        LIMIT $1
-        OFFSET $2
-      `,
-      [
-        limit,
-        offset
-      ]);
+    FROM property_images
+
+    WHERE property_id = p.id
+
+    LIMIT 1
+
+) img ON true
+
+WHERE p.status='approved'
+`;
+
+const values = [];
+
+if (cursor) {
+    values.push(cursor);
+    query += ` AND p.id < $${values.length}`;
+}
+
+values.push(limit);
+
+query += `
+ORDER BY p.id DESC
+LIMIT $${values.length};
+`;
+
+const result = await pool.query(query, values);
+     
 
     res.json({
-
-      page,
-
-      limit,
-
-      total,
-
-      totalPages:
-        Math.ceil(
-          total / limit
-        ),
-
-      properties:
-        result.rows
-
-    });
-
-  } catch (err) {
-
-    console.error(err);
-
-    res.status(500).json({
-      message:
-      "Erreur serveur"
-    });
-
-  }
+    properties: result.rows,
+    nextCursor:
+        result.rows.length
+            ? result.rows[result.rows.length - 1].id
+            : null
 });
+} catch (err) {
+    console.error(err);
+    res.status(500).json({
+        message: "Erreur serveur"
+    });
+}
+});
+
 
 app.get("/property/:code", async (req, res) => {
   try {
