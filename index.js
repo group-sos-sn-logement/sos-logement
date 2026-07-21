@@ -623,9 +623,10 @@ app.post("/properties", auth, async (req, res) => {
 
 
     let cleanedPrice = Number(
-      String(selectedPrice)
-      .replace(/\s/g,'')
-      .replace(/,/g,'')
+      price ||
+      price_month ||
+      price_week ||
+      price_day
     );
 
 
