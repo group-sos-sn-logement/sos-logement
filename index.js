@@ -572,7 +572,7 @@ app.post("/properties", auth, async (req, res) => {
     }
 
     const ownerId = req.user.id;
-    const { title, type, description, city, exact_location, price, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2, commission } = req.body;
+    const { title, type, description, city, exact_location, price, price_type, price_month, price_week, price_day, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2, commission } = req.body;
 
     const owner = await pool.query(
       "SELECT owner_ref FROM users WHERE id = $1",
@@ -607,16 +607,40 @@ app.post("/properties", auth, async (req, res) => {
     const propertyCode = `${prefix}-${String(nextNumber).padStart(4, "0")}`;
 
     // تنظيف السعر من فراغات أو فاصلة
-    let cleanedPrice = Number(price.toString().replace(/\s/g,'').replace(/,/g,''));
+    let selectedPrice = 0;
+
+    if (req.body.price_type === "monthly") {
+      selectedPrice = req.body.price_month;
+    }
+
+    if (req.body.price_type === "weekly") {
+      selectedPrice = req.body.price_week;
+    }
+
+    if (req.body.price_type === "daily") {
+      selectedPrice = req.body.price_day;
+    }
+
+
+    let cleanedPrice = Number(
+      String(selectedPrice)
+      .replace(/\s/g,'')
+      .replace(/,/g,'')
+    );
+
+
     if(isNaN(cleanedPrice)){
-      return res.status(400).json({ message: "Prix invalide" });
+      return res.status(400).json({
+        message: "Prix invalide"
+      });
     }
     const result = await pool.query(
       `INSERT INTO properties 
        (owner_id, property_code, title, type, description, city, exact_location, price, price_type, price_month, price_week, price_day, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2, commission, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16, 'pending')
+       VALUES
+       ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
        RETURNING *`,
-      [ownerId, propertyCode, title, type, description, city, exact_location, cleanedPrice, price_type, price_month, price_week, price_day, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2, commission ]
+      [ownerId, propertyCode, title, type, description, city, exact_location, cleanedPrice, price_type, price_month, price_week, price_day, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2, commission, "pending" ]
     );
     res.json({ message: "Bien ajouté", property: result.rows[0] });
 
