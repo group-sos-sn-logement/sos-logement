@@ -302,7 +302,13 @@ SELECT
     p.type,
     p.description,
     p.city,
+
     p.price,
+    p.price_type,
+    p.price_month,
+    p.price_week,
+    p.price_day,
+
     p.chambres,
     p.cuisine,
     p.sdb,
@@ -607,10 +613,10 @@ app.post("/properties", auth, async (req, res) => {
     }
     const result = await pool.query(
       `INSERT INTO properties 
-       (owner_id, property_code, title, type, description, city, exact_location, price, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2, commission, status)
+       (owner_id, property_code, title, type, description, city, exact_location, price, price_type, price_month, price_week, price_day, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2, commission, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16, 'pending')
        RETURNING *`,
-      [ownerId, propertyCode, title, type, description, city, exact_location, cleanedPrice, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2, commission ]
+      [ownerId, propertyCode, title, type, description, city, exact_location, cleanedPrice, price_type, price_month, price_week, price_day, chambres, cuisine, sdb, salon, is_student, max_students, surface_m2, commission ]
     );
     res.json({ message: "Bien ajouté", property: result.rows[0] });
 
@@ -1510,7 +1516,13 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
       description,
       city,
       exact_location,
+      
       price,
+      price_type,
+      price_month,
+      price_week,
+      price_day,
+
       chambres,
       cuisine,
       sdb,
@@ -1530,16 +1542,22 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
          city=$4,
          exact_location=$5,
          price=$6,
-         chambres=$7,
-         cuisine=$8,
-         sdb=$9,
-         salon=$10,
-         is_student=$11,
-         max_students=$12,
-         surface_m2=$13,
-         commission=$14,
+         price_type=$7,
+         price_month=$8,
+         price_week=$9,
+         price_day=$10,
+
+         chambres=$11,
+         cuisine=$12,
+         sdb=$13,
+         salon=$14,
+         is_student=$15,
+         max_students=$16,
+         surface_m2=$17,
+         commission=$18,
+
          status='pending'  
-       WHERE id=$15`,
+       WHERE id=$19`,
       [
         title,
         type,
@@ -1547,6 +1565,11 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
         city,
         exact_location,
         price,
+        price_type,
+        price_month,
+        price_week,
+        price_day,
+
         chambres,
         cuisine,
         sdb,
