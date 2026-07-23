@@ -882,6 +882,167 @@ app.post("/owner-request-public", async (req, res) => {
     res.status(500).json({ message: "Erreur serveur" });
   }
 });
+app.post("/login-phone", async (req, res) => {
+
+  try {
+
+    const { phone } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({
+        message: "Numéro obligatoire"
+      });
+    }
+
+    const userRes = await pool.query(
+      "SELECT * FROM users WHERE phone = $1",
+      [phone]
+    );
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({
+        message: "Numéro introuvable"
+      });
+    }
+
+    const user = userRes.rows[0];
+
+    const otp =
+      Math.floor(
+        100000 + Math.random() * 900000
+      ).toString();
+
+    await pool.query(
+      `
+      UPDATE users
+      SET
+        otp_code = $1,
+        otp_expires = NOW() + INTERVAL '5 minutes'
+      WHERE id = $2
+      `,
+      [
+        otp,
+        user.id
+      ]
+    );
+
+    // مؤقتاً فقط حتى نجرب
+    console.log("================================");
+    console.log("OTP :", otp);
+    console.log("PHONE :", phone);
+    console.log("================================");
+
+    res.json({
+      message: "Code envoyé"
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      message: "Erreur serveur"
+    });
+
+  }
+
+});
+
+app.post("/verify-otp", async (req, res) => {
+
+    try {
+
+        const { phone, code } = req.body;
+
+        if (!phone || !code) {
+            return res.status(400).json({
+                message: "Téléphone et code obligatoires"
+            });
+        }
+
+        const result = await pool.query(
+            "SELECT * FROM users WHERE phone = $1",
+            [phone]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: "Utilisateur introuvable"
+            });
+        }
+
+        const user = result.rows[0];
+
+        if (user.otp_code !== code) {
+            return res.status(400).json({
+                message: "Code incorrect"
+            });
+        }
+
+        if (new Date(user.otp_expires) < new Date()) {
+            return res.status(400).json({
+                message: "Code expiré"
+            });
+        }
+
+        const accessToken = jwt.sign(
+      {
+        id: user.id,
+        role: user.role
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1h"
+      }
+    );
+
+    const refreshToken = jwt.sign(
+      {
+        id: user.id
+      },
+      process.env.REFRESH_SECRET,
+      {
+        expiresIn: "7d"
+      }
+    );
+
+    await pool.query(
+      `
+      UPDATE users
+      SET
+        refresh_token = $1,
+        otp_code = NULL,
+        otp_expires = NULL
+      WHERE id = $2
+      `,
+      [
+        refreshToken,
+        user.id
+      ]
+    );
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    res.json({
+      accessToken
+    });
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+            message: "Erreur serveur"
+        });
+
+    }
+
+});
 
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
@@ -951,7 +1112,6 @@ app.post("/login", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
-});
 app.post("/refresh-token", async (req, res) => {
   const token = req.cookies.refreshToken;
 
@@ -1248,6 +1408,13 @@ app.put("/change-password", auth, async (req, res) => {
   );
 
   const user = userRes.rows[0];
+
+    if(user.role !== "admin"){
+        return res.status(403).json({
+            message:"Les utilisateurs doivent se connecter avec leur téléphone."
+        });
+      }
+    });
 
   const isMatch = await bcrypt.compare(oldPassword, user.password);
   if (!isMatch) {
