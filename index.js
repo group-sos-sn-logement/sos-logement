@@ -932,9 +932,9 @@ app.post("/login-phone", async (req, res) => {
     console.log("================================");
 
     res.json({
-      message: "Code envoyé"
+    message: "Code envoyé",
+    otp: otp
     });
-
   } catch (err) {
 
     console.error(err);
