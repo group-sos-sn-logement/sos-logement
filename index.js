@@ -912,6 +912,12 @@ app.post("/login-phone", async (req, res) => {
         100000 + Math.random() * 900000
       ).toString();
 
+      console.log("OTP CODE:", code);
+
+    res.json({
+        message:"Code envoyé"
+    });
+
     await pool.query(
       `
       UPDATE users
