@@ -75,11 +75,60 @@ const bcrypt = require('bcrypt');
 const pool = require('./db');
 
 const auth = require("./middleware/auth");
-const adminOnly = (req, res, next) => {
-  if (req.user.role !== "admin") {
-    return res.status(403).json({ message: "Accès réservé à l'admin" });
+const ADMIN_PHONES = [
+  "775515628",
+  "771079166",
+  "782900977"
+];
+
+
+const adminOnly = async (req, res, next) => {
+
+  try {
+
+    const user = await pool.query(
+      `
+      SELECT phone, role
+      FROM users
+      WHERE id=$1
+      `,
+      [req.user.id]
+    );
+
+
+    if(user.rows.length === 0){
+      return res.status(403).json({
+        message:"Utilisateur introuvable"
+      });
+    }
+
+
+    const phone = user.rows[0].phone;
+
+
+    if(
+      user.rows[0].role !== "admin" &&
+      !ADMIN_PHONES.includes(phone)
+    ){
+      return res.status(403).json({
+        message:"Accès réservé à l'administration"
+      });
+    }
+
+
+    next();
+
+
+  }catch(err){
+
+    console.error(err);
+
+    res.status(500).json({
+      message:"Erreur serveur"
+    });
+
   }
-  next();
+
 };
 
 const multer = require("multer");
