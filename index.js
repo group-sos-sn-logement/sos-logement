@@ -1443,6 +1443,84 @@ app.post("/complaints", async (req, res) => {
   }
 });
 
+
+app.post("/visit-request", async (req, res) => {
+
+    try {
+
+        const {
+
+            full_name,
+            email,
+            phone,
+            house_name,
+            note,
+            rental_duration,
+            move_in_date,
+            flexible_date,
+            visiter
+
+        } = req.body;
+
+        const result = await pool.query(
+
+            `INSERT INTO visit_requests (
+
+                full_name,
+                email,
+                phone,
+                house_name,
+                note,
+                rental_duration,
+                move_in_date,
+                flexible_date,
+                visiter
+
+            )
+
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+
+            RETURNING *;`,
+
+            [
+
+                full_name,
+                email,
+                phone,
+                house_name,
+                note,
+                rental_duration,
+                move_in_date,
+                flexible_date,
+                visiter
+
+            ]
+
+        );
+
+        res.status(201).json({
+
+            success: true,
+            message: "Demande enregistrée.",
+            request: result.rows[0]
+
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+
+            success: false,
+            message: "Erreur du serveur."
+
+        });
+
+    }
+
+});
+
 /* =========================
   ADMIN ROUTES
 ========================= */
