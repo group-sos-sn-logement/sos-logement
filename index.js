@@ -1160,6 +1160,8 @@ app.post("/login", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
+}); 
+
 app.post("/refresh-token", async (req, res) => {
   const token = req.cookies.refreshToken;
 
@@ -1526,37 +1528,48 @@ app.post("/visit-request", async (req, res) => {
 ========================= */
 
 app.put("/change-password", auth, async (req, res) => {
+
   const { oldPassword, newPassword } = req.body;
 
   const userRes = await pool.query(
-    "SELECT password FROM users WHERE id=$1",
+    "SELECT password, role FROM users WHERE id=$1",
     [req.user.id]
   );
 
   const user = userRes.rows[0];
 
-    if(user.role !== "admin"){
-        return res.status(403).json({
-            message:"Les utilisateurs doivent se connecter avec leur téléphone."
-        });
-      }
+  if(user.role !== "admin"){
+    return res.status(403).json({
+      message:"Les utilisateurs doivent se connecter avec leur téléphone."
     });
+  }
 
-  const isMatch = await bcrypt.compare(oldPassword, user.password);
+  const isMatch = await bcrypt.compare(
+    oldPassword,
+    user.password
+  );
+
   if (!isMatch) {
-    return res.status(400).json({ message: "Ancien mot de passe incorrect" });
+    return res.status(400).json({
+      message:"Ancien mot de passe incorrect"
+    });
   }
 
   const hashed = await bcrypt.hash(newPassword, 10);
 
   await pool.query(
     "UPDATE users SET password=$1 WHERE id=$2",
-    [hashed, req.user.id]
+    [
+      hashed,
+      req.user.id
+    ]
   );
 
-  res.json({ message: "Mot de passe mis à jour" });
-});
+  res.json({
+    message:"Mot de passe mis à jour"
+  });
 
+});
 app.get("/admin/all-owner-requests", auth, adminOnly, async (req, res) => {
   try {
 
