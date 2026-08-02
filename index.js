@@ -185,19 +185,18 @@ const transporter = nodemailer.createTransport({
 
   host: "smtp.gmail.com",
 
-  port: 587,
+  port: 465,
 
-  secure: false,
-
-  family: 4,
+  secure: true,
 
   auth: {
-
     user: process.env.EMAIL,
-
     pass: process.env.EMAIL_APP_PASSWORD
+  },
 
-  }
+  connectionTimeout: 60000,
+  greetingTimeout: 60000,
+  socketTimeout: 60000
 
 });
 
@@ -1504,7 +1503,7 @@ app.post("/project-request", async (req, res) => {
 
     const requestId = result.rows[0].id;
 
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
 
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
@@ -1553,16 +1552,14 @@ ${ideas}
 
     });
 
-  } catch (err) {
+   console.log("MAIL SENT:", info);
 
-    console.error("PROJECT REQUEST ERROR");
-    console.error(err);
-    console.error(err.stack);
+  } catch (mailError) {
 
-    res.status(500).json({
-      success:false,
-      message:err.message
-    });
+      console.error("MAIL ERROR:");
+      console.error(mailError);
+
+      throw mailError;
 
   }
 
