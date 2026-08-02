@@ -179,9 +179,7 @@ app.get("/verify-token", auth, (req, res) => {
 
 const nodemailer = require("nodemailer");
 
-const dns = require("dns");
 
-dns.setDefaultResultOrder("ipv4first");
 
 const transporter = nodemailer.createTransport({
 
