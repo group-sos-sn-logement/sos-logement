@@ -283,39 +283,111 @@ async function generateGlobalPropertyCode(userId){
 app.use("/hotels", hotelRoutes);
 
 app.post("/contact", async (req, res) => {
+
   console.log("CONTACT DATA:", req.body);
 
   try {
-    const { full_name, email, phone, subject, message, is_owner } = req.body;
 
-    
+    const {
+      full_name,
+      email,
+      phone,
+      subject,
+      message,
+      is_owner
+    } = req.body;
+
+    const result = await pool.query(
+
+      `INSERT INTO contact_messages
+      (
+        full_name,
+        email,
+        phone,
+        subject,
+        message,
+        is_owner
+      )
+
+      VALUES
+      ($1,$2,$3,$4,$5,$6)
+
+      RETURNING id`,
+
+      [
+        full_name,
+        email,
+        phone,
+        subject,
+        message,
+        is_owner
+      ]
+
+    );
+
+    const requestId = result.rows[0].id;
 
     await transporter.sendMail({
+
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
       to: process.env.EMAIL,
-      subject: `📩 Contactez-nous - Nouveau message de ${full_name}`,
+
+      subject: `📩 Nouveau message de contact #${requestId}`,
+
       text: `
-      Nom: ${full_name}
-      Email: ${email}
-      Téléphone: ${phone}
+ID : ${requestId}
 
-      Sujet:
-      ${subject}
+Nom : ${full_name}
 
-      Message:
-      ${message}
+Email : ${email}
 
-      Bailleur: ${is_owner}
-      `
+Téléphone : ${phone}
+
+Sujet :
+
+${subject}
+
+Message :
+
+${message}
+
+Propriétaire :
+
+${is_owner}
+`
+
     });
 
-    res.json({ success: true });
+    await pool.query(
+
+      `UPDATE contact_messages
+       SET email_sent = true
+       WHERE id = $1`,
+
+      [requestId]
+
+    );
+
+    res.json({
+
+      success: true
+
+    });
 
   } catch (err) {
+
     console.error("MAIL ERROR:", err);
-    res.status(500).json({ message: "Email failed", error: err.message });
+
+    res.status(500).json({
+
+      success: false,
+      message: "Erreur serveur."
+
+    });
+
   }
+
 });
 
 app.get("/properties", async (req, res) => {
@@ -1240,7 +1312,9 @@ app.get("/me", auth, async (req, res) => {
 ========================= */
 
 app.post("/budget-request", async (req, res) => {
+
   try {
+
     const {
       first_name,
       last_name,
@@ -1254,46 +1328,114 @@ app.post("/budget-request", async (req, res) => {
       note
     } = req.body;
 
-    await pool.query(
-      `INSERT INTO budget_requests 
-      (first_name, last_name, email, phone, zone, house_type, budget, user_type, students_number, note)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [first_name, last_name, email, phone, zone, house_type, budget, user_type, students_number, note]
+    const result = await pool.query(
+
+      `INSERT INTO budget_requests
+      (
+        first_name,
+        last_name,
+        email,
+        phone,
+        zone,
+        house_type,
+        budget,
+        user_type,
+        students_number,
+        note
+      )
+
+      VALUES
+      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+
+      RETURNING id`,
+
+      [
+        first_name,
+        last_name,
+        email,
+        phone,
+        zone,
+        house_type,
+        budget,
+        user_type,
+        students_number,
+        note
+      ]
+
     );
 
-    
+    const requestId = result.rows[0].id;
+
     await transporter.sendMail({
+
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+
       to: process.env.EMAIL,
 
-      replyTo: email,
+      subject: `💰 Nouvelle demande de budget #${requestId}`,
 
-      subject: `Budget d' utilisateur  ${first_name} ${last_name}`,
       text: `
-      Nom: ${first_name} ${last_name}
-      Email: ${email}
-      Téléphone: ${phone}
+ID : ${requestId}
 
-      Zone: ${zone}
-      Type: ${house_type}
-      Budget: ${budget}
-      Utilisateur: ${user_type}
+Nom : ${first_name} ${last_name}
 
-      Étudiants: ${students_number}
-      Note: ${note}
-      `
-      });
+Téléphone : ${phone}
 
-    res.json({ message: "Demande envoyée avec succès" });
+Email : ${email}
+
+Zone : ${zone}
+
+Type : ${house_type}
+
+Budget : ${budget}
+
+Utilisateur : ${user_type}
+
+Étudiants : ${students_number}
+
+Note :
+
+${note}
+`
+
+    });
+
+    await pool.query(
+
+      `UPDATE budget_requests
+       SET email_sent = true
+       WHERE id = $1`,
+
+      [requestId]
+
+    );
+
+    res.json({
+
+      success: true,
+      message: "Demande enregistrée."
+
+    });
 
   } catch (err) {
+
     console.error(err);
-    res.status(500).json({ message: "Erreur serveur" });
+
+    res.status(500).json({
+
+      success: false,
+      message: "Erreur serveur."
+
+    });
+
   }
+
 });
 
 app.post("/project-request", async (req, res) => {
+
   try {
+
     const {
       full_name,
       email,
@@ -1306,46 +1448,109 @@ app.post("/project-request", async (req, res) => {
     } = req.body;
 
     if (!full_name || !email || !phone) {
-      return res.status(400).json({ message: "Champs obligatoires manquants" });
+      return res.status(400).json({
+        message: "Champs obligatoires manquants"
+      });
     }
 
-    // 💾 حفظ في قاعدة البيانات
-    await pool.query(
-      `INSERT INTO diaspora_requests 
-      (full_name, email, phone, country, project_type, budget, land_status, ideas)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [full_name, email, phone, country, project_type, budget, land_status, ideas]
+    const result = await pool.query(
+
+      `INSERT INTO diaspora_requests
+      (
+        full_name,
+        email,
+        phone,
+        country,
+        project_type,
+        budget,
+        land_status,
+        ideas
+      )
+
+      VALUES
+      ($1,$2,$3,$4,$5,$6,$7,$8)
+
+      RETURNING id`,
+
+      [
+        full_name,
+        email,
+        phone,
+        country,
+        project_type,
+        budget,
+        land_status,
+        ideas
+      ]
+
     );
 
-    // 📩 إرسال للإيميل (كما عندك)
+    const requestId = result.rows[0].id;
+
     await transporter.sendMail({
+
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
-
       to: process.env.EMAIL,
-      subject:  `🏗️ Projet d' un diaspora - ${full_name}`,
+
+      subject: `🏗️ Nouveau projet diaspora #${requestId}`,
+
       text: `
-      Nom: ${full_name}
-      Email: ${email}
-      Téléphone: ${phone}
-      Pays: ${country}
+ID : ${requestId}
 
-      Type: ${project_type}
-      Budget: ${budget}
-      Terrain: ${land_status}
+Nom : ${full_name}
 
-      Idées:
-      ${ideas}
-      `
+Téléphone : ${phone}
+
+Email : ${email}
+
+Pays : ${country}
+
+Type : ${project_type}
+
+Budget : ${budget}
+
+Terrain : ${land_status}
+
+Idées :
+
+${ideas}
+`
+
     });
 
-    res.json({ message: "Demande envoyée avec succès" });
+    await pool.query(
+
+      `UPDATE diaspora_requests
+       SET email_sent = true
+       WHERE id = $1`,
+
+      [requestId]
+
+    );
+
+    res.json({
+
+      success: true,
+      message: "Demande enregistrée."
+
+    });
 
   } catch (err) {
+
     console.error(err);
-    res.status(500).json({ message: "Erreur serveur" });
+
+    res.status(500).json({
+
+      success: false,
+      message: "Erreur serveur."
+
+    });
+
   }
+
 });
+
 
 app.get("/admin/diaspora", auth, adminOnly, async (req, res) => {
   try {
@@ -1466,7 +1671,7 @@ app.post("/visit-request", async (req, res) => {
 
         const result = await pool.query(
 
-            `INSERT INTO visit_requests (
+            `INSERT INTO property_requests (
 
                 full_name,
                 email,
@@ -1476,13 +1681,13 @@ app.post("/visit-request", async (req, res) => {
                 rental_duration,
                 move_in_date,
                 flexible_date,
-                visiter
+                visit_property
 
             )
 
             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
 
-            RETURNING *;`,
+            RETURNING id;`,
 
             [
 
@@ -1500,11 +1705,54 @@ app.post("/visit-request", async (req, res) => {
 
         );
 
+        const requestId = result.rows[0].id;
+
+        await transporter.sendMail({
+
+            from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+
+            to: process.env.EMAIL,
+
+            subject: `🏠 Nouvelle demande de visite #${requestId}`,
+
+            text: `
+ID : ${requestId}
+
+Nom : ${full_name}
+
+Téléphone : ${phone}
+
+Email : ${email}
+
+Maison : ${house_name}
+
+Durée : ${rental_duration}
+
+Date souhaitée : ${move_in_date}
+
+Flexible : ${flexible_date}
+
+Note :
+
+${note}
+`
+
+        });
+
+        await pool.query(
+
+            `UPDATE property_requests
+             SET email_sent=true
+             WHERE id=$1`,
+
+            [requestId]
+
+        );
+
         res.status(201).json({
 
             success: true,
-            message: "Demande enregistrée.",
-            request: result.rows[0]
+            message: "Demande enregistrée."
 
         });
 
