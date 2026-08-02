@@ -1,4 +1,5 @@
 const dns = require("dns");
+
 dns.setDefaultResultOrder("ipv4first");
 
 require("dotenv").config();
@@ -178,13 +179,28 @@ app.get("/verify-token", auth, (req, res) => {
 
 const nodemailer = require("nodemailer");
 
+const dns = require("dns");
+
+dns.setDefaultResultOrder("ipv4first");
+
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+
+  host: "smtp.gmail.com",
+
+  port: 587,
+
+  secure: false,
+
+  family: 4,
 
   auth: {
+
     user: process.env.EMAIL,
+
     pass: process.env.EMAIL_APP_PASSWORD
+
   }
+
 });
 
 transporter.verify((error) => {
