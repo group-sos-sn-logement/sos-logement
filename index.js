@@ -1436,6 +1436,9 @@ app.post("/project-request", async (req, res) => {
 
   try {
 
+        console.log("BODY =", req.body);
+
+
     const {
       full_name,
       email,
@@ -1486,7 +1489,7 @@ app.post("/project-request", async (req, res) => {
     );
 
     const requestId = result.rows[0].id;
-
+    /*
     await transporter.sendMail({
 
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
@@ -1518,6 +1521,7 @@ ${ideas}
 `
 
     });
+    */
 
     await pool.query(
 
@@ -1538,13 +1542,13 @@ ${ideas}
 
   } catch (err) {
 
+    console.error("PROJECT REQUEST ERROR");
     console.error(err);
+    console.error(err.stack);
 
     res.status(500).json({
-
-      success: false,
-      message: "Erreur serveur."
-
+      success:false,
+      message:err.message
     });
 
   }
