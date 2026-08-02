@@ -1489,7 +1489,7 @@ app.post("/project-request", async (req, res) => {
     );
 
     const requestId = result.rows[0].id;
-    /*
+
     await transporter.sendMail({
 
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
@@ -1521,7 +1521,6 @@ ${ideas}
 `
 
     });
-    */
 
     await pool.query(
 
