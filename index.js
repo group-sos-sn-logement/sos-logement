@@ -204,22 +204,23 @@ async function sendMail(to, subject, content, isHtml = false) {
   console.log("SUBJECT:", subject);
   console.log("=====================");
 
-  const headers = [
-    `To: ${to}`,
-    `From: S.O.S LOGEMENT <${process.env.GOOGLE_EMAIL}>`,
-    `Subject: ${subject}`,
-    "MIME-Version: 1.0",
-    `Content-Type: ${isHtml ? "text/html" : "text/plain"}; charset=UTF-8`,
-    "",
-    content
-  ];
+  const message = [
+  `From: S.O.S LOGEMENT <${process.env.GOOGLE_EMAIL}>`,
+  `To: ${to}`,
+  `Subject: ${subject}`,
+  "MIME-Version: 1.0",
+  `Content-Type: ${isHtml ? "text/html" : "text/plain"}; charset=UTF-8`,
+  "Content-Transfer-Encoding: 7bit",
+  "",
+  content
+].join("\r\n");
 
-  const encodedMessage = Buffer
-    .from(headers.join("\n"), "utf8")
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+const encodedMessage = Buffer
+  .from(message, "utf8")
+  .toString("base64")
+  .replace(/\+/g, "-")
+  .replace(/\//g, "_")
+  .replace(/=+$/, "");
 
   await gmail.users.messages.send({
     userId: "me",
