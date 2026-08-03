@@ -2725,7 +2725,7 @@ app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
             <p style="color:#333;font-size:15px;">
               Nous avons le plaisir de vous informer que votre demande de création de compte
               <strong>propriétaire</strong> sur la plateforme
-              <strong>sos.logement.com</strong>
+              <strong>soslogement.sn</strong>
               a été
               <span style="color:green;font-weight:bold;">
                 validée avec succès
