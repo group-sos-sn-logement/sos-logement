@@ -197,25 +197,26 @@ const gmail = google.gmail({
   auth: oauth2Client
 });
 
-async function sendMail(to, subject, text) {
+async function sendMail(to, subject, content, isHtml = false) {
 
-  const message = [
+  const headers = [
     `To: ${to}`,
     `From: S.O.S LOGEMENT <${process.env.GOOGLE_EMAIL}>`,
     `Subject: ${subject}`,
-    "Content-Type: text/plain; charset=utf-8",
+    "MIME-Version: 1.0",
+    `Content-Type: ${isHtml ? "text/html" : "text/plain"}; charset=UTF-8`,
     "",
-    text
-  ].join("\n");
+    content
+  ];
 
   const encodedMessage = Buffer
-    .from(message, "utf8")
+    .from(headers.join("\n"), "utf8")
     .toString("base64")
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
 
-  return gmail.users.messages.send({
+  await gmail.users.messages.send({
     userId: "me",
     requestBody: {
       raw: encodedMessage
@@ -354,17 +355,13 @@ app.post("/contact", async (req, res) => {
 
     const requestId = result.rows[0].id;
 
-    const transporter = await createTransporter();
+    await sendMail(
 
-    gmail.users.messages.send({
+  process.env.GOOGLE_EMAIL,
 
-      from: `"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
+  `📩 Nouveau message de contact #${requestId}`,
 
-      to: process.env.EMAIL,
-
-      subject: `📩 Nouveau message de contact #${requestId}`,
-
-      text: `
+`
 ID : ${requestId}
 
 Nom : ${full_name}
@@ -386,7 +383,7 @@ Propriétaire :
 ${is_owner}
 `
 
-    });
+);
 
     await pool.query(
 
@@ -1395,17 +1392,13 @@ app.post("/budget-request", async (req, res) => {
 
     const requestId = result.rows[0].id;
 
-    const transporter = await createTransporter();
+    await sendMail(
 
-    gmail.users.messages.send({
+  process.env.GOOGLE_EMAIL,
 
-      from: `"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
+  `💰 Nouvelle demande de budget #${requestId}`,
 
-      to: process.env.EMAIL,
-
-      subject: `💰 Nouvelle demande de budget #${requestId}`,
-
-      text: `
+`
 ID : ${requestId}
 
 Nom : ${first_name} ${last_name}
@@ -1429,7 +1422,7 @@ Note :
 ${note}
 `
 
-    });
+);
 
     await pool.query(
 
@@ -1617,16 +1610,15 @@ app.post("/admin/reply-diaspora", auth, adminOnly, async (req, res) => {
 
 
     
-    const transporter = await createTransporter();
+    await sendMail(
 
-    gmail.users.messages.send({    
-      from: `"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
+        process.env.GOOGLE_EMAIL,
 
+        "Réponse de S.O.S LOGEMENT",
 
-      to: process.env.EMAIL,
-      subject: "Réponse de S.O.S LOGEMENT",
-      text: message
-    });
+        message
+
+    );
 
     res.json({ message: "Reply sent" });
 
@@ -1654,27 +1646,29 @@ app.post("/complaints", async (req, res) => {
     );
 
 
-    // 🔥 إرسال إلى freshdesk
-    const transporter = await createTransporter();
+    await sendMail(
 
-    gmail.users.messages.send({
-      from: `"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
+    process.env.GOOGLE_EMAIL,
 
+    `⚖️ Porteur du plainte ${first_name} ${last_name}`,
 
-      to: process.env.EMAIL,
-      subject: `⚖️ Porteur du plainte ${first_name} ${last_name}`,
-      text: `
-        Nom: ${first_name} ${last_name}
-        Email: ${email}
-        Tel: ${tel}
+    `
+    Nom : ${first_name} ${last_name}
 
-        Maison: ${house_name}
-        Lieu: ${house_location}
+    Email : ${email}
 
-        Cause:
-        ${cause}
-      `
-      });
+    Tel : ${tel}
+
+    Maison : ${house_name}
+
+    Lieu : ${house_location}
+
+    Cause :
+
+    ${cause}
+    `
+
+    );
 
     res.status(201).json({ message: "Complaint sent to freshdesk ✅" });
 
@@ -1741,17 +1735,13 @@ app.post("/visit-request", async (req, res) => {
 
         const requestId = result.rows[0].id;
 
-        const transporter = await createTransporter();
+       await sendMail(
 
-          gmail.users.messages.send({
+  process.env.GOOGLE_EMAIL,
 
-            from: `"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
+  `🏠 Nouvelle demande de visite #${requestId}`,
 
-            to: process.env.EMAIL,
-
-            subject: `🏠 Nouvelle demande de visite #${requestId}`,
-
-            text: `
+`
 ID : ${requestId}
 
 Nom : ${full_name}
@@ -1773,7 +1763,7 @@ Note :
 ${note}
 `
 
-        });
+);
 
         await pool.query(
 
@@ -2196,22 +2186,21 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
         req.params.id
       ]
     );
-    const transporter = await createTransporter();
+    await sendMail(
 
-    gmail.users.messages.send({
-      from: `"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
+    process.env.GOOGLE_EMAIL,
 
+    "🏠 Modification d'un bien",
 
-      to: process.env.EMAIL,
-      subject: "🏠 Modification d'un bien",
-      text: `
-      Un propriétaire a modifié un bien.
-
-      ID Bien: ${req.params.id}
-
-      Le bien est repassé en attente de validation.
     `
-    });
+    Un propriétaire a modifié un bien.
+
+    ID Bien: ${req.params.id}
+
+    Le bien est repassé en attente de validation.
+    `
+
+    );
 
     res.json({
       message: "Modification enregistrée"
@@ -2709,59 +2698,66 @@ app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
         owner_sequence = $3
       WHERE id = $1
     `, [userId, ref, next]);
-    const transporter = await createTransporter();
+    await sendMail(
 
-    gmail.users.messages.send({
-      from: '"S.O.S LOGEMENT" <' + process.env.GOOGLE_EMAIL+ '>',
-      to: user.rows[0].email,
-      subject: "Validation de votre compte propriétaire",
-      html: `
-      <div style="font-family: Arial, sans-serif; background-color:#f6f6f6; padding:20px;">
-        <div style="max-width:600px; margin:auto; background:#ffffff; border-radius:8px; padding:30px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
-          
-          <h2 style="color:#2c3e50; text-align:center;">
-            Validation de votre compte propriétaire
-          </h2>
+      user.rows[0].email,
 
-          <p style="color:#333; font-size:15px;">
-            Bonjour,
-          </p>
+      "Validation de votre compte propriétaire",
 
-          <p style="color:#333; font-size:15px;">
-            Nous avons le plaisir de vous informer que votre demande de création de compte 
-            <strong>propriétaire</strong> sur la plateforme <strong>sos.logement.com</strong> a été 
-            <span style="color:green; font-weight:bold;">validée avec succès</span>.
-          </p>
-
-          <p style="color:#333; font-size:15px;">
-            Votre référence propriétaire est la suivante :
-          </p>
-
-          <div style="text-align:center; margin:20px 0;">
-            <span style="display:inline-block; background:#f1f1f1; padding:10px 20px; border-radius:6px; font-size:18px; font-weight:bold; color:#2c3e50;">
-              ${ref}
-            </span>
-          </div>
-
-          <p style="color:#333; font-size:15px;">
-            Nous vous invitons à conserver cette référence précieusement, elle pourra vous être demandée lors de vos futures démarches.
-          </p>
-
-          <p style="color:#333; font-size:15px;">
-            Vous pouvez désormais accéder à votre espace et publier vos biens en toute sécurité.
-          </p>
-
-          <hr style="border:none; border-top:1px solid #eee; margin:25px 0;">
-
-          <p style="color:#777; font-size:13px; text-align:center;">
-            Cet email est généré automatiquement, merci de ne pas y répondre.<br>
-            © ${new Date().getFullYear()} S.O.S LOGEMENT — Tous droits réservés
-          </p>
-
-        </div>
-      </div>
       `
-    });
+        <div style="font-family: Arial, sans-serif; background-color:#f6f6f6; padding:20px;">
+          <div style="max-width:600px; margin:auto; background:#ffffff; border-radius:8px; padding:30px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+
+            <h2 style="color:#2c3e50; text-align:center;">
+              Validation de votre compte propriétaire
+            </h2>
+
+            <p style="color:#333;font-size:15px;">
+              Bonjour,
+            </p>
+
+            <p style="color:#333;font-size:15px;">
+              Nous avons le plaisir de vous informer que votre demande de création de compte
+              <strong>propriétaire</strong> sur la plateforme
+              <strong>sos.logement.com</strong>
+              a été
+              <span style="color:green;font-weight:bold;">
+                validée avec succès
+              </span>.
+            </p>
+
+            <p style="color:#333;font-size:15px;">
+              Votre référence propriétaire est la suivante :
+            </p>
+
+            <div style="text-align:center;margin:20px 0;">
+              <span style="display:inline-block;background:#f1f1f1;padding:10px 20px;border-radius:6px;font-size:18px;font-weight:bold;color:#2c3e50;">
+                ${ref}
+              </span>
+            </div>
+
+            <p style="color:#333;font-size:15px;">
+              Nous vous invitons à conserver cette référence précieusement.
+            </p>
+
+            <p style="color:#333;font-size:15px;">
+              Vous pouvez désormais accéder à votre espace et publier vos biens en toute sécurité.
+            </p>
+
+            <hr>
+
+            <p style="color:#777;font-size:13px;text-align:center;">
+              Cet email est généré automatiquement, merci de ne pas y répondre.<br>
+              © ${new Date().getFullYear()} S.O.S LOGEMENT — Tous droits réservés
+            </p>
+
+          </div>
+        </div>
+      `,
+
+      true
+
+  );
     res.json({ message: "Propriétaire approuvé", reference: ref });
 
   } catch (err) {
@@ -3052,25 +3048,19 @@ await pool.query(
 );
 }
 
-for(const user of users.rows){
+for (const user of users.rows) {
 
-const transporter = await createTransporter();
+    await sendMail(
 
-gmail.users.messages.send({
+        user.email,
 
-from:
-`"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
+        "Message de l'administration",
 
-to:
-user.email,
+        `<p>${message}</p>`,
 
-subject:
-"Message de l'administration",
+        true
 
-html:
-`<p>${message}</p>`
-
-});
+    );
 
 }
 
@@ -3100,17 +3090,17 @@ app.post("/admin/send-one-mail", auth, adminOnly, async (req,res)=>{
 
     const { email, message } = req.body;
 
-    const transporter = await createTransporter();
+      await sendMail(
 
-    gmail.users.messages.send({
+      email,
 
-      from: `"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
+      "Message de l'administration",
 
+      `<p>${message}</p>`,
 
-      to: process.env.EMAIL,
-      subject: "Message de l'administration",
-      html: `<p>${message}</p>`
-    });
+      true
+
+  );
 
     res.json({message:"Email envoyé"});
 
