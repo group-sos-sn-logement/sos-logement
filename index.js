@@ -207,6 +207,7 @@ async function createTransporter() {
     }
   });
 }
+/*
 
 transporter.verify((error) => {
 
@@ -222,7 +223,7 @@ console.log("SMTP READY ✅");
 
 });
 
-
+*/
 app.use((req, res, next) => {
   const safeBody = { ...req.body };
 
