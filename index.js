@@ -182,9 +182,7 @@ app.get("/verify-token", auth, (req, res) => {
 
 
 
-const nodemailer = require("nodemailer");
 const { google } = require("googleapis");
-
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET
@@ -194,21 +192,42 @@ oauth2Client.setCredentials({
   refresh_token: process.env.GOOGLE_REFRESH_TOKEN
 });
 
-async function createTransporter() {
-  const accessToken = await oauth2Client.getAccessToken();
+const gmail = google.gmail({
+  version: "v1",
+  auth: oauth2Client
+});
 
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      type: "OAuth2",
-      user: process.env.GOOGLE_EMAIL,
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-      accessToken: accessToken.token
+async function sendMail(to, subject, text) {
+
+  const message = [
+    `To: ${to}`,
+    `From: S.O.S LOGEMENT <${process.env.GOOGLE_EMAIL}>`,
+    `Subject: ${subject}`,
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    text
+  ].join("\n");
+
+  const encodedMessage = Buffer
+    .from(message, "utf8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  return gmail.users.messages.send({
+    userId: "me",
+    requestBody: {
+      raw: encodedMessage
     }
   });
 }
+
+
+oauth2Client.setCredentials({
+  refresh_token: process.env.GOOGLE_REFRESH_TOKEN
+});
+
 
 app.use((req, res, next) => {
   const safeBody = { ...req.body };
@@ -337,9 +356,9 @@ app.post("/contact", async (req, res) => {
 
     const transporter = await createTransporter();
 
-    await transporter.sendMail({
+    gmail.users.messages.send({
 
-      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+      from: `"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
 
       to: process.env.EMAIL,
 
@@ -1378,9 +1397,9 @@ app.post("/budget-request", async (req, res) => {
 
     const transporter = await createTransporter();
 
-    await transporter.sendMail({
+    gmail.users.messages.send({
 
-      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+      from: `"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
 
       to: process.env.EMAIL,
 
@@ -1502,17 +1521,13 @@ app.post("/project-request", async (req, res) => {
 
     const requestId = result.rows[0].id;
 
-    const transporter = await createTransporter();
+    await sendMail(
 
-    await transporter.sendMail({
+  process.env.GOOGLE_EMAIL,
 
-      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+  `🏗️ Nouveau projet diaspora #${requestId}`,
 
-      to: process.env.EMAIL,
-
-      subject: `🏗️ Nouveau projet diaspora #${requestId}`,
-
-      text: `
+`
 ID : ${requestId}
 
 Nom : ${full_name}
@@ -1534,9 +1549,9 @@ Idées :
 ${ideas}
 `
 
-    });
-    console.log("MAIL SENT:", info);
+);
 
+console.log("MAIL SENT");
 
     await pool.query(
 
@@ -1604,8 +1619,8 @@ app.post("/admin/reply-diaspora", auth, adminOnly, async (req, res) => {
     
     const transporter = await createTransporter();
 
-    await transporter.sendMail({    
-      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+    gmail.users.messages.send({    
+      from: `"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
 
 
       to: process.env.EMAIL,
@@ -1642,8 +1657,8 @@ app.post("/complaints", async (req, res) => {
     // 🔥 إرسال إلى freshdesk
     const transporter = await createTransporter();
 
-    await transporter.sendMail({
-      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+    gmail.users.messages.send({
+      from: `"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
 
 
       to: process.env.EMAIL,
@@ -1728,9 +1743,9 @@ app.post("/visit-request", async (req, res) => {
 
         const transporter = await createTransporter();
 
-          await transporter.sendMail({
+          gmail.users.messages.send({
 
-            from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+            from: `"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
 
             to: process.env.EMAIL,
 
@@ -2183,8 +2198,8 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
     );
     const transporter = await createTransporter();
 
-    await transporter.sendMail({
-      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+    gmail.users.messages.send({
+      from: `"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
 
 
       to: process.env.EMAIL,
@@ -2696,8 +2711,8 @@ app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
     `, [userId, ref, next]);
     const transporter = await createTransporter();
 
-    await transporter.sendMail({
-      from: '"S.O.S LOGEMENT" <' + process.env.EMAIL+ '>',
+    gmail.users.messages.send({
+      from: '"S.O.S LOGEMENT" <' + process.env.GOOGLE_EMAIL+ '>',
       to: user.rows[0].email,
       subject: "Validation de votre compte propriétaire",
       html: `
@@ -3041,10 +3056,10 @@ for(const user of users.rows){
 
 const transporter = await createTransporter();
 
-await transporter.sendMail({
+gmail.users.messages.send({
 
 from:
-`"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+`"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
 
 to:
 user.email,
@@ -3087,9 +3102,9 @@ app.post("/admin/send-one-mail", auth, adminOnly, async (req,res)=>{
 
     const transporter = await createTransporter();
 
-    await transporter.sendMail({
+    gmail.users.messages.send({
 
-      from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
+      from: `"S.O.S LOGEMENT" <${process.env.GOOGLE_EMAIL}>`,
 
 
       to: process.env.EMAIL,
