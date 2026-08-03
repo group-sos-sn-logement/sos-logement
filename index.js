@@ -177,7 +177,6 @@ app.get("/verify-token", auth, (req, res) => {
 
 
 
-const nodemailer = require("nodemailer");
 
 
 
@@ -3102,7 +3101,7 @@ app.post("/admin/send-one-mail", auth, adminOnly, async (req,res)=>{
     const transporter = await createTransporter();
 
     await transporter.sendMail({
-      
+
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
 
