@@ -199,6 +199,11 @@ const gmail = google.gmail({
 
 async function sendMail(to, subject, content, isHtml = false) {
 
+  console.log("===== SEND MAIL =====");
+  console.log("TO:", to);
+  console.log("SUBJECT:", subject);
+  console.log("=====================");
+
   const headers = [
     `To: ${to}`,
     `From: S.O.S LOGEMENT <${process.env.GOOGLE_EMAIL}>`,
