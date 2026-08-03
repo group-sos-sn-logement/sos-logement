@@ -181,24 +181,33 @@ const nodemailer = require("nodemailer");
 
 
 
-const transporter = nodemailer.createTransport({
+const nodemailer = require("nodemailer");
+const { google } = require("googleapis");
 
-  host: "smtp.gmail.com",
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET
+);
 
-  port: 465,
-
-  secure: true,
-
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.EMAIL_APP_PASSWORD
-  },
-
-  connectionTimeout: 60000,
-  greetingTimeout: 60000,
-  socketTimeout: 60000
-
+oauth2Client.setCredentials({
+  refresh_token: process.env.GOOGLE_REFRESH_TOKEN
 });
+
+async function createTransporter() {
+  const accessToken = await oauth2Client.getAccessToken();
+
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      type: "OAuth2",
+      user: process.env.GOOGLE_EMAIL,
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+      accessToken: accessToken.token
+    }
+  });
+}
 
 transporter.verify((error) => {
 
@@ -339,6 +348,8 @@ app.post("/contact", async (req, res) => {
     );
 
     const requestId = result.rows[0].id;
+
+    const transporter = await createTransporter();
 
     await transporter.sendMail({
 
@@ -1379,6 +1390,8 @@ app.post("/budget-request", async (req, res) => {
 
     const requestId = result.rows[0].id;
 
+    const transporter = await createTransporter();
+
     await transporter.sendMail({
 
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
@@ -1503,7 +1516,9 @@ app.post("/project-request", async (req, res) => {
 
     const requestId = result.rows[0].id;
 
-    const info = await transporter.sendMail({
+    const transporter = await createTransporter();
+
+    await transporter.sendMail({
 
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
@@ -1601,7 +1616,9 @@ app.post("/admin/reply-diaspora", auth, adminOnly, async (req, res) => {
 
 
     
-    await transporter.sendMail({
+    const transporter = await createTransporter();
+
+    await transporter.sendMail({    
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
 
@@ -1637,6 +1654,8 @@ app.post("/complaints", async (req, res) => {
 
 
     // 🔥 إرسال إلى freshdesk
+    const transporter = await createTransporter();
+
     await transporter.sendMail({
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
@@ -1721,7 +1740,9 @@ app.post("/visit-request", async (req, res) => {
 
         const requestId = result.rows[0].id;
 
-        await transporter.sendMail({
+        const transporter = await createTransporter();
+
+          await transporter.sendMail({
 
             from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
@@ -2174,6 +2195,8 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
         req.params.id
       ]
     );
+    const transporter = await createTransporter();
+
     await transporter.sendMail({
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
@@ -2685,6 +2708,8 @@ app.put("/admin/users/:id/approve-owner", auth, adminOnly, async (req, res) => {
         owner_sequence = $3
       WHERE id = $1
     `, [userId, ref, next]);
+    const transporter = await createTransporter();
+
     await transporter.sendMail({
       from: '"S.O.S LOGEMENT" <' + process.env.EMAIL+ '>',
       to: user.rows[0].email,
@@ -3028,6 +3053,8 @@ await pool.query(
 
 for(const user of users.rows){
 
+const transporter = await createTransporter();
+
 await transporter.sendMail({
 
 from:
@@ -3071,7 +3098,11 @@ app.post("/admin/send-one-mail", auth, adminOnly, async (req,res)=>{
   try{
 
     const { email, message } = req.body;
+
+    const transporter = await createTransporter();
+
     await transporter.sendMail({
+      
       from: `"S.O.S LOGEMENT" <${process.env.EMAIL}>`,
 
 
