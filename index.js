@@ -9,8 +9,10 @@ const app = express();
 
 const hotelRoutes = require("./routes/hotelRoutes");
 
-console.log("EMAIL:", process.env.EMAIL);
-console.log("PASS EXISTS:", !!process.env.EMAIL_APP_PASSWORD);
+console.log("GOOGLE EMAIL:", process.env.GOOGLE_EMAIL);
+console.log("CLIENT ID EXISTS:", !!process.env.GOOGLE_CLIENT_ID);
+console.log("CLIENT SECRET EXISTS:", !!process.env.GOOGLE_CLIENT_SECRET);
+console.log("REFRESH TOKEN EXISTS:", !!process.env.GOOGLE_REFRESH_TOKEN);
 
 const adminHotelRoutes =
 require("./routes/adminHotelRoutes");
@@ -207,23 +209,7 @@ async function createTransporter() {
     }
   });
 }
-/*
 
-transporter.verify((error) => {
-
-if(error){
-
-console.log("SMTP VERIFY ERROR:", error);
-
-}else{
-
-console.log("SMTP READY ✅");
-
-}
-
-});
-
-*/
 app.use((req, res, next) => {
   const safeBody = { ...req.body };
 
@@ -1549,6 +1535,8 @@ ${ideas}
 `
 
     });
+    console.log("MAIL SENT:", info);
+
 
     await pool.query(
 
@@ -1566,8 +1554,6 @@ ${ideas}
       message: "Demande enregistrée."
 
     });
-
-   console.log("MAIL SENT:", info);
 
   } catch (mailError) {
 
