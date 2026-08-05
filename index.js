@@ -1081,6 +1081,10 @@ app.post("/owner-request-public", async (req, res) => {
     res.status(500).json({ message: "Erreur serveur" });
   }
 });
+
+/* =====================================================
+      LOGIN-PHONE
+========================================================*/
 app.post("/login-phone", async (req, res) => {
 
   try {
@@ -1124,15 +1128,13 @@ app.post("/login-phone", async (req, res) => {
       ]
     );
 
-    // مؤقتاً فقط حتى نجرب
-    console.log("================================");
-    console.log("OTP :", otp);
-    console.log("PHONE :", phone);
-    console.log("================================");
+    await sendSMS(
+      phone,
+      `Votre code de vérification S.O.S LOGEMENT est : ${otp}. Il expire dans 5 minutes.`
+    );
 
     res.json({
-    message: "Code envoyé",
-    otp: otp
+      message: "Code envoyé"
     });
   } catch (err) {
 
