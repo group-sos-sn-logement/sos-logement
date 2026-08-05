@@ -1,11 +1,13 @@
+require("dotenv").config();
+const express = require("express");
+const app = express();
+
 const dns = require("dns");
 
 dns.setDefaultResultOrder("ipv4first");
 
-require("dotenv").config();
 
-const express = require("express");
-const app = express();
+const { sendSMS } = require("./services/notification");
 
 const hotelRoutes = require("./routes/hotelRoutes");
 
@@ -298,6 +300,50 @@ async function generateGlobalPropertyCode(userId){
         [userId]
     );
 
+
+    app.post("/test-sms", async (req, res) => {
+
+    try {
+
+        const { phone } = req.body;
+
+        if (!phone) {
+
+            return res.status(400).json({
+                message: "Phone is required"
+            });
+
+        }
+
+        await sendSMS(
+
+            phone,
+
+            "Bonjour 👋 Ceci est le premier SMS envoyé par S.O.S LOGEMENT."
+
+        );
+
+        res.json({
+
+            success: true,
+            message: "SMS envoyé."
+
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+
+            success: false,
+            message: "Erreur lors de l'envoi du SMS."
+
+        });
+
+    }
+
+});
     // مستقبلا:
     // cars
     // lands
