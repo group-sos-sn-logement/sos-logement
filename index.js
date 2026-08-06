@@ -1009,59 +1009,36 @@ app.post("/login-phone", async (req, res) => {
 
     const { phone } = req.body;
 
-    let smsPhone = phone.replace(/\D/g, "");
-
-    if (!smsPhone.startsWith("221")) {
-        smsPhone = "221" + smsPhone;
+        if (!phone) {
+        return res.status(400).json({
+            message: "Numéro obligatoire"
+        });
     }
 
-    smsPhone = "+" + smsPhone;
+    // الهاتف كما أرسله المستخدم (للبحث في قاعدة البيانات)
+    const dbPhone = phone.trim();
 
-    console.log("PHONE DB :", phone);
-    console.log("PHONE SMS:", smsPhone);
+    // الهاتف الذي سيرسل إليه Bird
+    let smsPhone = dbPhone.replace(/\s+/g, "");
 
-    if (!phone) {
-      return res.status(400).json({
-        message: "Numéro obligatoire"
-      });
+    if (!smsPhone.startsWith("+221")) {
+
+        if (smsPhone.startsWith("221")) {
+            smsPhone = "+" + smsPhone;
+        } else {
+            smsPhone = "+221" + smsPhone;
+        }
+
     }
 
-    const userRes = await pool.query(
-      "SELECT * FROM users WHERE phone = $1",
-      [phone]
-    );
+    console.log("PHONE DB   =", dbPhone);
+    console.log("PHONE SMS  =", smsPhone);
 
-    if (userRes.rows.length === 0) {
-      return res.status(404).json({
-        message: "Numéro introuvable"
-      });
-    }
-
-    const user = userRes.rows[0];
-
-    const otp =
-      Math.floor(
-        100000 + Math.random() * 900000
-      ).toString();
-    await pool.query(
-      `
-      UPDATE users
-      SET
-        otp_code = $1,
-        otp_expires = NOW() + INTERVAL '5 minutes'
-      WHERE id = $2
-      `,
-      [
-        otp,
-        user.id
-      ]
-    );
     console.log("OTP =", otp);
-    console.log("PHONE SMS =", smsPhone);
-    
-   await sendSMS(
-      smsPhone,
-          `Votre code de vérification S.O.S LOGEMENT est : ${otp}. Il expire dans 5 minutes.`
+
+    await sendSMS(
+        smsPhone,
+        `Votre code de vérification S.O.S LOGEMENT est : ${otp}. Il expire dans 5 minutes.`
     );
 
     res.json({
@@ -1091,9 +1068,9 @@ app.post("/verify-otp", async (req, res) => {
             });
         }
 
-        const result = await pool.query(
+        const userRes = await pool.query(
             "SELECT * FROM users WHERE phone = $1",
-            [phone]
+            [dbPhone]
         );
 
         if (result.rows.length === 0) {
