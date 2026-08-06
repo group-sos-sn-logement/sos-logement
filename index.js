@@ -278,88 +278,6 @@ if (process.env.NODE_ENV !== "production") {
   });
 }
 
-
-async function generateGlobalPropertyCode(userId){
-
-    // نأتي بمرجع المالك
-    const userRes = await pool.query(
-        `SELECT owner_ref FROM users WHERE id = $1`,
-        [userId]
-    );
-
-    const ownerRef = userRes.rows[0].owner_ref;
-
-    // نحسب عدد جميع العروض
-    const propertiesCount = await pool.query(
-        `SELECT COUNT(*) FROM properties WHERE user_id = $1`,
-        [userId]
-    );
-
-    const hotelsCount = await pool.query(
-        `SELECT COUNT(*) FROM hotels WHERE user_id = $1`,
-        [userId]
-    );
-
-
-    app.post("/test-sms", async (req, res) => {
-
-    try {
-
-        const { phone } = req.body;
-
-        if (!phone) {
-
-            return res.status(400).json({
-                message: "Phone is required"
-            });
-
-        }
-
-        await sendSMS(
-
-            phone,
-
-            "Bonjour 👋 Ceci est le premier SMS envoyé par S.O.S LOGEMENT."
-
-        );
-
-        res.json({
-
-            success: true,
-            message: "SMS envoyé."
-
-        });
-
-    } catch (err) {
-
-        console.error(err);
-
-        res.status(500).json({
-
-            success: false,
-            message: "Erreur lors de l'envoi du SMS."
-
-        });
-
-    }
-
-});
-    // مستقبلا:
-    // cars
-    // lands
-    // etc
-
-    const total =
-        parseInt(propertiesCount.rows[0].count)
-        +
-        parseInt(hotelsCount.rows[0].count);
-
-    const sequence =
-        String(total + 1).padStart(3, "0");
-
-    return `${ownerRef}-${sequence}`;
-}
-
 app.use("/hotels", hotelRoutes);
 
 app.post("/contact", async (req, res) => {
@@ -1091,6 +1009,17 @@ app.post("/login-phone", async (req, res) => {
 
     const { phone } = req.body;
 
+    let smsPhone = phone.replace(/\D/g, "");
+
+    if (!smsPhone.startsWith("221")) {
+        smsPhone = "221" + smsPhone;
+    }
+
+    smsPhone = "+" + smsPhone;
+
+    console.log("PHONE DB :", phone);
+    console.log("PHONE SMS:", smsPhone);
+
     if (!phone) {
       return res.status(400).json({
         message: "Numéro obligatoire"
@@ -1127,10 +1056,12 @@ app.post("/login-phone", async (req, res) => {
         user.id
       ]
     );
-
-    await sendSMS(
-      phone,
-      `Votre code de vérification S.O.S LOGEMENT est : ${otp}. Il expire dans 5 minutes.`
+    console.log("OTP =", otp);
+    console.log("PHONE SMS =", smsPhone);
+    
+   await sendSMS(
+      smsPhone,
+          `Votre code de vérification S.O.S LOGEMENT est : ${otp}. Il expire dans 5 minutes.`
     );
 
     res.json({
