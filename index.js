@@ -190,6 +190,28 @@ const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_SECRET
 );
 
+function normalizePhone(phone) {
+
+      phone = phone.trim();
+
+      if (phone.startsWith("+")) {
+          phone = "+" + phone.substring(1).replace(/\D/g, "");
+      } else {
+          phone = phone.replace(/\D/g, "");
+      }
+
+      if (!phone.startsWith("+")) {
+
+          if (/^7\d{8}$/.test(phone)) {
+              return "+221" + phone;
+          }
+
+          throw new Error("Veuillez saisir votre indicatif international (ex: +33, +223, +1...)");
+      }
+
+      return phone;
+  }
+
 oauth2Client.setCredentials({
   refresh_token: process.env.GOOGLE_REFRESH_TOKEN
 });
@@ -618,27 +640,7 @@ app.post("/register",
 
       const { name, phone, password } = req.body;
 
-      function normalizePhone(phone) {
-
-      phone = phone.trim();
-
-      if (phone.startsWith("+")) {
-          phone = "+" + phone.substring(1).replace(/\D/g, "");
-      } else {
-          phone = phone.replace(/\D/g, "");
-      }
-
-      if (!phone.startsWith("+")) {
-
-          if (/^7\d{8}$/.test(phone)) {
-              return "+221" + phone;
-          }
-
-          throw new Error("Veuillez saisir votre indicatif international (ex: +33, +223, +1...)");
-      }
-
-      return phone;
-  }
+      
 
   const normalizedPhone = normalizePhone(phone);
 
@@ -1051,6 +1053,7 @@ app.post("/login-phone", async (req, res) => {
   try {
 
     const { phone } = req.body;
+    const normalizedPhone = normalizePhone(phone);
 
         if (!phone) {
         return res.status(400).json({
