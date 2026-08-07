@@ -606,7 +606,7 @@ message:
    ADD PROPERTY
 ========================= */
 app.post("/register",
-    body("email").isEmail(),
+    body("phone").notEmpty(),
   body("password").isLength({ min: 6 }),
   async (req, res) => {
     const errors = validationResult(req);
@@ -616,7 +616,31 @@ app.post("/register",
 
   try {
 
-    const { name, email, password } = req.body;
+      const { name, phone, password } = req.body;
+
+      function normalizePhone(phone) {
+
+      phone = phone.trim();
+
+      if (phone.startsWith("+")) {
+          phone = "+" + phone.substring(1).replace(/\D/g, "");
+      } else {
+          phone = phone.replace(/\D/g, "");
+      }
+
+      if (!phone.startsWith("+")) {
+
+          if (/^7\d{8}$/.test(phone)) {
+              return "+221" + phone;
+          }
+
+          throw new Error("Veuillez saisir votre indicatif international (ex: +33, +223, +1...)");
+      }
+
+      return phone;
+  }
+
+  const normalizedPhone = normalizePhone(phone);
 
     // لا نثق بالـ role القادم من الفرونت
     let role = "seeker";
@@ -635,27 +659,40 @@ app.post("/register",
 
     // التأكد أن الإيميل غير مكرر
     const userExists = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
+        "SELECT * FROM users WHERE phone = $1",
+        [normalizedPhone]
     );
 
     if (userExists.rows.length > 0) {
-      return res.status(400).json({ error: "Email déjà utilisé" });
+      return res.status(400).json({
+          error: "Téléphone déjà utilisé"
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await pool.query(
-      `INSERT INTO users (name, email, password, role, approved)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [name, email, hashedPassword, role, role === "owner" ? false : true]
+      `INSERT INTO users (name, phone, password, role, approved)
+      VALUES ($1, $2, $3, $4, $5)`,
+      [name, normalizedPhone, hashedPassword, role, role === "owner" ? false : true]
     );
 
     res.json({ message: "Compte créé avec succès" });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erreur serveur" });
+
+      console.error(err);
+
+      if (err.message) {
+          return res.status(400).json({
+              error: err.message
+          });
+      }
+
+      res.status(500).json({
+          error: "Erreur serveur"
+      });
+
   }
 });
 
@@ -893,7 +930,6 @@ app.put("/properties/:id/cover", auth, async (req, res) => {
 
 
 app.post("/register-owner",
-  body("email").isEmail().withMessage("Email invalide"),
   body("password")
     .isLength({ min: 6 })
     .withMessage("Mot de passe doit contenir au moins 6 caractères"),
@@ -909,19 +945,21 @@ app.post("/register-owner",
     }
 
     try {
-      const { first_name, last_name, email, phone, password } = req.body;
+      const { first_name, last_name, phone, password } = req.body;
 
-      if (!first_name || !last_name || !email || !phone || !password) {
+      const normalizedPhone = normalizePhone(phone);
+
+      if (!first_name || !last_name || !phone || !password) {
         return res.status(400).json({ message: "Tous les champs sont obligatoires" });
       }
       // 🔍 تحقق من وجود المستخدم
       const existing = await pool.query(
-        "SELECT id FROM users WHERE email=$1",
-        [email]
+          "SELECT id FROM users WHERE phone = $1",
+          [normalizedPhone]
       );
 
       if (existing.rows.length > 0) {
-        return res.status(400).json({ message: "Email déjà utilisé" });
+        return res.status(400).json({ message: "Numéro déjà utilisé" });
       }
 
       // 🔐 تشفير الباسورد
@@ -929,10 +967,15 @@ app.post("/register-owner",
 
       // 🆕 إنشاء owner (غير مُوافق عليه)
       await pool.query(`
-        INSERT INTO users 
-        (first_name, last_name, email, phone, password, role, approved, owner_request)
-        VALUES ($1,$2,$3,$4,$5,'owner',false,true)
-      `, [first_name, last_name, email, phone, hashed]);
+      INSERT INTO users
+      (first_name,last_name,phone,password,role,approved,owner_request)
+      VALUES($1,$2,$3,$4,'owner',false,true)
+      `,[
+          first_name,
+          last_name,
+          normalizedPhone,
+          hashed
+      ]);
 
       res.json({ message: "Compte propriétaire créé (en attente de validation)" });
 
@@ -1153,7 +1196,9 @@ app.post("/verify-otp", async (req, res) => {
 });
 
 app.post("/login", async (req, res) => {
-  const { phone, password } = req.body;
+  let { phone, password } = req.body;
+
+  phone = normalizePhone(phone);
 
   try {
     const userRes = await pool.query(
@@ -1161,10 +1206,11 @@ app.post("/login", async (req, res) => {
       [phone]
     );
 
-    if (userRes.rows.length === 0) {
-      return res.status(400).json({ message: "Le téléphone ou le mot de passe incorrect" });
+    if (user.rows.length === 0) {
+        return res.status(401).json({
+            message: "Numéro ou mot de passe incorrect"
+        });
     }
-
     
 
     const user = userRes.rows[0];
@@ -1173,7 +1219,7 @@ app.post("/login", async (req, res) => {
 
     if (!isMatch) {
       return res.status(400).json({
-        message: "Email ou mot de passe incorrect"
+        message: "Le téléphone ou le mot de passe incorrect"
       });
     }
 
