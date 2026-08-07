@@ -1153,16 +1153,16 @@ app.post("/verify-otp", async (req, res) => {
 });
 
 app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { phone, password } = req.body;
 
   try {
     const userRes = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
+      "SELECT * FROM users WHERE phone = $1",
+      [phone]
     );
 
     if (userRes.rows.length === 0) {
-      return res.status(400).json({ message: "Email ou mot de passe incorrect" });
+      return res.status(400).json({ message: "Le téléphone ou le mot de passe incorrect" });
     }
 
     
