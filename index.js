@@ -1294,6 +1294,8 @@ app.post("/login", async (req, res) => {
             [normalizedPhone]
         );
 
+        console.log("USER FOUND =", userRes.rows.length);
+
         // المستخدم غير موجود
         if (userRes.rows.length === 0) {
             return res.status(401).json({
@@ -1304,6 +1306,11 @@ app.post("/login", async (req, res) => {
         // الآن فقط نأخذ المستخدم
         const user = userRes.rows[0];
 
+        console.log("USER ID =", user.id);
+        console.log("USER PHONE DB =", user.phone);
+        console.log("USER ROLE =", user.role);
+        console.log("PASSWORD EXISTS =", !!user.password);
+
         // =========================
         // مقارنة كلمة المرور
         // =========================
@@ -1312,6 +1319,8 @@ app.post("/login", async (req, res) => {
             password,
             user.password
         );
+
+        console.log("PASSWORD MATCH =", isMatch);
 
         if (!isMatch) {
             return res.status(401).json({
