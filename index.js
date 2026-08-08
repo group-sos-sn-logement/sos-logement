@@ -81,9 +81,9 @@ const pool = require('./db');
 
 const auth = require("./middleware/auth");
 const ADMIN_PHONES = [
-  "775515628",
-  "771079166",
-  "782900977"
+  "+221775515628",
+  "+221771079166",
+  "+221782900977"
 ];
 
 
