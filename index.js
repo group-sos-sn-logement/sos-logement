@@ -179,11 +179,6 @@ app.get("/verify-token", auth, (req, res) => {
   });
 });
 
-
-
-
-
-
 const { google } = require("googleapis");
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -192,25 +187,25 @@ const oauth2Client = new google.auth.OAuth2(
 
 function normalizePhone(phone) {
 
-      phone = phone.trim();
+    phone = phone.trim();
 
-      if (phone.startsWith("+")) {
-          phone = "+" + phone.substring(1).replace(/\D/g, "");
-      } else {
-          phone = phone.replace(/\D/g, "");
-      }
+    if (phone.startsWith("+")) {
+        phone = "+" + phone.substring(1).replace(/\D/g, "");
+    } else {
+        phone = phone.replace(/\D/g, "");
+    }
 
-      if (!phone.startsWith("+")) {
+    if (!phone.startsWith("+")) {
 
-          if (/^7\d{8}$/.test(phone)) {
-              return "+221" + phone;
-          }
+        if (/^7\d{8}$/.test(phone)) {
+            return "+221" + phone;
+        }
 
-          throw new Error("Veuillez saisir votre indicatif international (ex: +33, +223, +1...)");
-      }
+        throw new Error("Veuillez saisir votre indicatif international (ex: +33, +223, +1...)");
+    }
 
-      return phone;
-  }
+    return phone;
+}
 
 oauth2Client.setCredentials({
   refresh_token: process.env.GOOGLE_REFRESH_TOKEN
@@ -1053,11 +1048,20 @@ app.post("/login-phone", async (req, res) => {
   try {
 
     const { phone } = req.body;
-    const normalizedPhone = normalizePhone(phone);
 
-        if (!phone) {
+    if (!phone) {
         return res.status(400).json({
             message: "Numéro obligatoire"
+        });
+    }
+
+    let normalizedPhone;
+
+    try {
+        normalizedPhone = normalizePhone(phone);
+    } catch (err) {
+        return res.status(400).json({
+            message: err.message
         });
     }
 
@@ -1114,18 +1118,40 @@ app.post("/verify-otp", async (req, res) => {
             });
         }
 
+        // =========================
+        // توحيد الهاتف
+        // =========================
+
+        let normalizedPhone;
+
+        try {
+            normalizedPhone = normalizePhone(phone);
+        } catch (err) {
+            return res.status(400).json({
+                message: err.message
+            });
+        }
+
+        // =========================
+        // البحث عن المستخدم
+        // =========================
+
         const userRes = await pool.query(
             "SELECT * FROM users WHERE phone = $1",
-            [dbPhone]
+            [normalizedPhone]
         );
 
-        if (result.rows.length === 0) {
+        if (userRes.rows.length === 0) {
             return res.status(404).json({
                 message: "Utilisateur introuvable"
             });
         }
 
-        const user = result.rows[0];
+        const user = userRes.rows[0];
+
+        // =========================
+        // التحقق من OTP
+        // =========================
 
         if (user.otp_code !== code) {
             return res.status(400).json({
@@ -1133,144 +1159,248 @@ app.post("/verify-otp", async (req, res) => {
             });
         }
 
-        if (new Date(user.otp_expires) < new Date()) {
+        // =========================
+        // انتهاء صلاحية OTP
+        // =========================
+
+        if (
+            !user.otp_expires ||
+            new Date(user.otp_expires) < new Date()
+        ) {
             return res.status(400).json({
                 message: "Code expiré"
             });
         }
 
+        // =========================
+        // Access Token
+        // =========================
+
         const accessToken = jwt.sign(
-      {
-        id: user.id,
-        role: user.role
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "1h"
-      }
-    );
+            {
+                id: user.id,
+                role: user.role
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "1h"
+            }
+        );
 
-    const refreshToken = jwt.sign(
-      {
-        id: user.id
-      },
-      process.env.REFRESH_SECRET,
-      {
-        expiresIn: "7d"
-      }
-    );
+        // =========================
+        // Refresh Token
+        // =========================
 
-    await pool.query(
-      `
-      UPDATE users
-      SET
-        refresh_token = $1,
-        otp_code = NULL,
-        otp_expires = NULL
-      WHERE id = $2
-      `,
-      [
-        refreshToken,
-        user.id
-      ]
-    );
+        const refreshToken = jwt.sign(
+            {
+                id: user.id
+            },
+            process.env.REFRESH_SECRET,
+            {
+                expiresIn: "7d"
+            }
+        );
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+        // =========================
+        // حفظ Refresh Token
+        // ومسح OTP
+        // =========================
 
-    res.json({
-      accessToken
-    });
+        await pool.query(
+            `
+            UPDATE users
+            SET
+                refresh_token = $1,
+                otp_code = NULL,
+                otp_expires = NULL
+            WHERE id = $2
+            `,
+            [
+                refreshToken,
+                user.id
+            ]
+        );
+
+        // =========================
+        // Cookie
+        // =========================
+
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        res.json({
+            accessToken,
+            role: user.role,
+            approved: user.approved
+        });
 
     } catch (err) {
 
-        console.error(err);
+        console.error("VERIFY OTP ERROR:", err);
 
         res.status(500).json({
             message: "Erreur serveur"
         });
-
     }
 
 });
 
+/* =====================================================
+   LOGIN
+========================================================= */
+
 app.post("/login", async (req, res) => {
-  let { phone, password } = req.body;
 
-  phone = normalizePhone(phone);
+    try {
 
-  try {
-    const userRes = await pool.query(
-      "SELECT * FROM users WHERE phone = $1",
-      [phone]
-    );
+        let { phone, password } = req.body;
 
-    if (user.rows.length === 0) {
-        return res.status(401).json({
-            message: "Numéro ou mot de passe incorrect"
+        // =========================
+        // التحقق من البيانات
+        // =========================
+
+        if (!phone || !password) {
+            return res.status(400).json({
+                message: "Téléphone et mot de passe obligatoires"
+            });
+        }
+
+        // =========================
+        // توحيد رقم الهاتف
+        // =========================
+
+        let normalizedPhone;
+
+        try {
+            normalizedPhone = normalizePhone(phone);
+        } catch (err) {
+            return res.status(400).json({
+                message: err.message
+            });
+        }
+
+        console.log("LOGIN PHONE =", normalizedPhone);
+
+        // =========================
+        // البحث عن المستخدم
+        // =========================
+
+        const userRes = await pool.query(
+            "SELECT * FROM users WHERE phone = $1",
+            [normalizedPhone]
+        );
+
+        // المستخدم غير موجود
+        if (userRes.rows.length === 0) {
+            return res.status(401).json({
+                message: "Numéro ou mot de passe incorrect"
+            });
+        }
+
+        // الآن فقط نأخذ المستخدم
+        const user = userRes.rows[0];
+
+        // =========================
+        // مقارنة كلمة المرور
+        // =========================
+
+        const isMatch = await bcrypt.compare(
+            password,
+            user.password
+        );
+
+        if (!isMatch) {
+            return res.status(401).json({
+                message: "Numéro ou mot de passe incorrect"
+            });
+        }
+
+        // =========================
+        // الحساب محظور؟
+        // =========================
+
+        if (user.banned) {
+            return res.status(403).json({
+                message: "Compte bloqué"
+            });
+        }
+
+        // =========================
+        // إنشاء Access Token
+        // =========================
+
+        const accessToken = jwt.sign(
+            {
+                id: user.id,
+                role: user.role
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "1h"
+            }
+        );
+
+        // =========================
+        // إنشاء Refresh Token
+        // =========================
+
+        const refreshToken = jwt.sign(
+            {
+                id: user.id
+            },
+            process.env.REFRESH_SECRET,
+            {
+                expiresIn: "7d"
+            }
+        );
+
+        // =========================
+        // حفظ Refresh Token
+        // =========================
+
+        await pool.query(
+            "UPDATE users SET refresh_token = $1 WHERE id = $2",
+            [
+                refreshToken,
+                user.id
+            ]
+        );
+
+        // =========================
+        // Cookie
+        // =========================
+
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        // =========================
+        // الرد للفرونت
+        // =========================
+
+        res.json({
+            accessToken,
+            role: user.role,
+            approved: user.approved
+        });
+
+    } catch (err) {
+
+        console.error("LOGIN ERROR:", err);
+
+        res.status(500).json({
+            message: "Erreur serveur"
         });
     }
-    
 
-    const user = userRes.rows[0];
-
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(400).json({
-        message: "Le téléphone ou le mot de passe incorrect"
-      });
-    }
-
-    if (user.banned) {
-      return res.status(403).json({
-        message: "Compte bloqué"
-      });
-    }
-
-    const accessToken = jwt.sign(
-      {
-        id: user.id,
-        role: user.role
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-    const refreshToken = jwt.sign(
-      { id: user.id },
-      process.env.REFRESH_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    // 🔥 نحفظه في DB (مهم للتحكم)
-    await pool.query(
-      "UPDATE users SET refresh_token = $1 WHERE id = $2",
-      [refreshToken, user.id]
-    );
-
-    // 🍪 نحطه في cookie
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true, // في production HTTPS
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
-
-    res.json({
-      accessToken
-    });
-
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Erreur serveur" });
-  }
-}); 
-
+});
 app.post("/refresh-token", async (req, res) => {
   const token = req.cookies.refreshToken;
 
