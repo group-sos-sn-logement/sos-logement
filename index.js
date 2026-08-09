@@ -1329,20 +1329,16 @@ app.post("/login", async (req, res) => {
         // EMAIL + PHONE
         // =========================
 
-        const userRes =
-            await pool.query(
-
-                `SELECT *
-                 FROM users
-                 WHERE LOWER(email) = $1
-                 AND phone = $2`,
-
-                [
-                    normalizedEmail,
-                    normalizedPhone
-                ]
-
-            );
+        const userRes = await pool.query(
+          `SELECT *
+          FROM users
+          WHERE LOWER(email) = $1
+          AND role = 'admin'
+          LIMIT 1`,
+          [
+              normalizedEmail
+          ]
+      );
 
 
         console.log(
@@ -1373,8 +1369,29 @@ app.post("/login", async (req, res) => {
         // المستخدم
         // =========================
 
-        const user =
-            userRes.rows[0];
+        const user = userRes.rows[0];
+
+
+        // =========================
+        // التحقق من رقم Admin
+        // =========================
+
+        const adminPhones = [
+            "+221775515628",
+            "+221771079166",
+            "+221782900977"
+        ];
+
+        if (!adminPhones.includes(normalizedPhone)) {
+
+            return res.status(401).json({
+
+                message:
+                    "Numéro de téléphone administrateur incorrect"
+
+            });
+
+        }
 
 
         console.log(
