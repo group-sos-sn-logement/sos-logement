@@ -1252,22 +1252,40 @@ app.post("/verify-otp", async (req, res) => {
 /* =====================================================
    LOGIN
 ========================================================= */
-
 app.post("/login", async (req, res) => {
 
     try {
 
-        let { phone, password } = req.body;
+        let {
+            email,
+            phone,
+            password
+        } = req.body;
+
 
         // =========================
         // التحقق من البيانات
         // =========================
 
-        if (!phone || !password) {
+        if (!email || !phone || !password) {
+
             return res.status(400).json({
-                message: "Téléphone et mot de passe obligatoires"
+
+                message:
+                    "Email, téléphone et mot de passe obligatoires"
+
             });
+
         }
+
+
+        // =========================
+        // تنظيف البريد
+        // =========================
+
+        const normalizedEmail =
+            email.trim().toLowerCase();
+
 
         // =========================
         // توحيد رقم الهاتف
@@ -1276,179 +1294,275 @@ app.post("/login", async (req, res) => {
         let normalizedPhone;
 
         try {
-            normalizedPhone = normalizePhone(phone);
-        } catch (err) {
-            return res.status(400).json({
-                message: err.message
-            });
+
+            normalizedPhone =
+                normalizePhone(phone);
+
         }
 
-        console.log("LOGIN PHONE =", normalizedPhone);
+        catch (err) {
+
+            return res.status(400).json({
+
+                message: err.message
+
+            });
+
+        }
+
+
+        console.log(
+            "LOGIN EMAIL =",
+            normalizedEmail
+        );
+
+        console.log(
+            "LOGIN PHONE =",
+            normalizedPhone
+        );
+
 
         // =========================
         // البحث عن المستخدم
+        //
+        // يجب أن يتطابق:
+        // EMAIL + PHONE
         // =========================
 
-        const userRes = await pool.query(
-            "SELECT * FROM users WHERE phone = $1",
-            [normalizedPhone]
+        const userRes =
+            await pool.query(
+
+                `SELECT *
+                 FROM users
+                 WHERE LOWER(email) = $1
+                 AND phone = $2`,
+
+                [
+                    normalizedEmail,
+                    normalizedPhone
+                ]
+
+            );
+
+
+        console.log(
+            "USER FOUND =",
+            userRes.rows.length
         );
 
-        console.log("USER FOUND =", userRes.rows.length);
 
+        // =========================
         // المستخدم غير موجود
-        if (userRes.rows.length === 0) {
+        // =========================
+
+        if (
+            userRes.rows.length === 0
+        ) {
+
             return res.status(401).json({
-                message: "Numéro ou mot de passe incorrect"
+
+                message:
+                    "Email ou numéro de téléphone incorrect"
+
             });
+
         }
 
-        // الآن فقط نأخذ المستخدم
-        const user = userRes.rows[0];
 
-        console.log("USER ID =", user.id);
-        console.log("USER PHONE DB =", user.phone);
-        console.log("USER ROLE =", user.role);
-        console.log("PASSWORD EXISTS =", !!user.password);
+        // =========================
+        // المستخدم
+        // =========================
+
+        const user =
+            userRes.rows[0];
+
+
+        console.log(
+            "USER ID =",
+            user.id
+        );
+
+        console.log(
+            "USER EMAIL DB =",
+            user.email
+        );
+
+        console.log(
+            "USER PHONE DB =",
+            user.phone
+        );
+
+        console.log(
+            "USER ROLE =",
+            user.role
+        );
+
 
         // =========================
         // مقارنة كلمة المرور
         // =========================
 
-        const isMatch = await bcrypt.compare(
-            password,
-            user.password
+        const isMatch =
+            await bcrypt.compare(
+                password,
+                user.password
+            );
+
+
+        console.log(
+            "PASSWORD MATCH =",
+            isMatch
         );
 
-        console.log("PASSWORD MATCH =", isMatch);
 
         if (!isMatch) {
+
             return res.status(401).json({
-                message: "Numéro ou mot de passe incorrect"
+
+                message:
+                    "Mot de passe incorrect"
+
             });
+
         }
+
 
         // =========================
         // الحساب محظور؟
         // =========================
 
         if (user.banned) {
+
             return res.status(403).json({
-                message: "Compte bloqué"
+
+                message:
+                    "Compte bloqué"
+
             });
+
         }
 
-        // =========================
-        // إنشاء Access Token
-        // =========================
-
-        const accessToken = jwt.sign(
-            {
-                id: user.id,
-                role: user.role
-            },
-            process.env.JWT_SECRET,
-            {
-                expiresIn: "1h"
-            }
-        );
 
         // =========================
-        // إنشاء Refresh Token
+        // Access Token
         // =========================
 
-        const refreshToken = jwt.sign(
-            {
-                id: user.id
-            },
-            process.env.REFRESH_SECRET,
-            {
-                expiresIn: "7d"
-            }
-        );
+        const accessToken =
+            jwt.sign(
+
+                {
+                    id: user.id,
+                    role: user.role
+                },
+
+                process.env.JWT_SECRET,
+
+                {
+                    expiresIn: "1h"
+                }
+
+            );
+
+
+        // =========================
+        // Refresh Token
+        // =========================
+
+        const refreshToken =
+            jwt.sign(
+
+                {
+                    id: user.id
+                },
+
+                process.env.REFRESH_SECRET,
+
+                {
+                    expiresIn: "7d"
+                }
+
+            );
+
 
         // =========================
         // حفظ Refresh Token
         // =========================
 
         await pool.query(
-            "UPDATE users SET refresh_token = $1 WHERE id = $2",
+
+            `UPDATE users
+             SET refresh_token = $1
+             WHERE id = $2`,
+
             [
                 refreshToken,
                 user.id
             ]
+
         );
+
 
         // =========================
         // Cookie
         // =========================
 
-        res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "strict",
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
+        res.cookie(
+            "refreshToken",
+            refreshToken,
+            {
+
+                httpOnly: true,
+
+                secure: true,
+
+                sameSite: "strict",
+
+                maxAge:
+                    7 *
+                    24 *
+                    60 *
+                    60 *
+                    1000
+
+            }
+        );
+
 
         // =========================
-        // الرد للفرونت
+        // الرد
         // =========================
 
         res.json({
+
             accessToken,
-            role: user.role,
-            approved: user.approved
+
+            role:
+                user.role,
+
+            approved:
+                user.approved
+
         });
 
-    } catch (err) {
 
-        console.error("LOGIN ERROR:", err);
+    }
+
+    catch (err) {
+
+        console.error(
+            "LOGIN ERROR:",
+            err
+        );
 
         res.status(500).json({
-            message: "Erreur serveur"
+
+            message:
+                "Erreur serveur"
+
         });
+
     }
 
-});
-app.post("/refresh-token", async (req, res) => {
-  const token = req.cookies.refreshToken;
-
-  if (!token) {
-    return res.status(401).json({ message: "No refresh token" });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.REFRESH_SECRET);
-
-    // 🔥 تحقق أنه موجود في DB (مهم جدًا)
-    const userRes = await pool.query(
-      "SELECT refresh_token FROM users WHERE id=$1",
-      [decoded.id]
-    );
-
-    if (userRes.rows.length === 0 || userRes.rows[0].refresh_token !== token) {
-      return res.status(403).json({ message: "Invalid refresh token" });
-    }
-
-    const user = await pool.query(
-      "SELECT role FROM users WHERE id=$1",
-      [decoded.id]
-    );
-
-    const newAccessToken = jwt.sign(
-      {
-        id: decoded.id,
-        role: user.rows[0].role
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    res.json({ accessToken: newAccessToken });
-
-  } catch (err) {
-    return res.status(403).json({ message: "Invalid token" });
-  }
 });   
 
 app.post("/logout", auth, async (req,res)=>{
