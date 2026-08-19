@@ -346,7 +346,7 @@ app.post("/contact", async (req, res) => {
 
   process.env.GOOGLE_EMAIL,
 
-  `📩 Nouveau message de contact #${requestId}`,
+  `Nouveau message de contact #${requestId}`,
 
 `
 ID : ${requestId}
@@ -1958,7 +1958,7 @@ app.post("/budget-request", async (req, res) => {
 
   process.env.GOOGLE_EMAIL,
 
-  `💰 Nouvelle demande de budget #${requestId}`,
+  `Nouvelle demande de budget #${requestId}`,
 
 `
 ID : ${requestId}
@@ -2080,7 +2080,7 @@ app.post("/project-request", async (req, res) => {
 
   process.env.GOOGLE_EMAIL,
 
-  `🏗️ Nouveau projet diaspora #${requestId}`,
+  ` Nouveau projet diaspora #${requestId}`,
 
 `
 ID : ${requestId}
@@ -2212,7 +2212,7 @@ app.post("/complaints", async (req, res) => {
 
     process.env.GOOGLE_EMAIL,
 
-    `⚖️ Porteur du plainte ${first_name} ${last_name}`,
+    ` Porteur du plainte ${first_name} ${last_name}`,
 
     `
     Nom : ${first_name} ${last_name}
@@ -2301,7 +2301,7 @@ app.post("/visit-request", async (req, res) => {
 
   process.env.GOOGLE_EMAIL,
 
-  `🏠 Nouvelle demande de visite #${requestId}`,
+  `Nouvelle demande de visite #${requestId}`,
 
 `
 ID : ${requestId}
@@ -2752,7 +2752,7 @@ app.put("/owner/properties/:id", auth, async (req, res) => {
 
     process.env.GOOGLE_EMAIL,
 
-    "🏠 Modification d'un bien",
+    " Modification d'un bien",
 
     `
     Un propriétaire a modifié un bien.
