@@ -274,8 +274,45 @@ const login = async (req, res) => {
 };
 
 
+/* =========================================================
+   CURRENT USER
+========================================================= */
+
+const me = async (req, res) => {
+
+    try {
+
+        res.json({
+
+            success: true,
+
+            user: {
+                id: req.user.id,
+                name: req.user.name,
+                phone: req.user.phone,
+                role: req.user.role
+            }
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "ME ERROR:",
+            error
+        );
+
+        res.status(500).json({
+            message: "Erreur serveur"
+        });
+
+    }
+
+};
+
 
 module.exports = {
     register,
-    login
+    login,
+    me
 };

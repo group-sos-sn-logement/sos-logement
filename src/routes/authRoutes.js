@@ -1,9 +1,12 @@
 const express = require("express");
 
+
 const {
     register,
-    login
+    login,
+    me
 } = require("../controllers/authController");
+
 
 const {
     requestRecovery,
@@ -12,11 +15,16 @@ const {
 } = require("../controllers/recoveryController");
 
 
+const {
+    authenticateToken
+} = require("../middleware/authMiddleware");
+
+
 const router = express.Router();
 
 
 /* =========================================================
-   AUTH
+   REGISTER
 ========================================================= */
 
 router.post(
@@ -25,9 +33,24 @@ router.post(
 );
 
 
+/* =========================================================
+   LOGIN
+========================================================= */
+
 router.post(
     "/login",
     login
+);
+
+
+/* =========================================================
+   CURRENT USER
+========================================================= */
+
+router.get(
+    "/me",
+    authenticateToken,
+    me
 );
 
 
