@@ -1,7 +1,8 @@
 const express = require("express");
 
 const {
-    register
+    register,
+    login
 } = require("../controllers/authController");
 
 const {
@@ -10,12 +11,46 @@ const {
     resetPassword
 } = require("../controllers/recoveryController");
 
+
 const router = express.Router();
 
-router.post("/register", register);
 
-router.post("/recovery/request", requestRecovery);
-router.post("/recovery/verify", verifyRecoveryCode);
-router.post("/recovery/reset", resetPassword);
+/* =========================================================
+   AUTH
+========================================================= */
+
+router.post(
+    "/register",
+    register
+);
+
+
+router.post(
+    "/login",
+    login
+);
+
+
+/* =========================================================
+   RECOVERY
+========================================================= */
+
+router.post(
+    "/recovery/request",
+    requestRecovery
+);
+
+
+router.post(
+    "/recovery/verify",
+    verifyRecoveryCode
+);
+
+
+router.post(
+    "/recovery/reset",
+    resetPassword
+);
+
 
 module.exports = router;
