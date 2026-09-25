@@ -26,7 +26,6 @@ const becomeOwner = async (req, res) => {
         const {
             name,
             phone,
-            email,
             password
         } = req.body;
 
@@ -75,7 +74,6 @@ const becomeOwner = async (req, res) => {
                         id,
                         name,
                         phone,
-                        email,
                         role,
                         owner_ref,
                         owner_code
@@ -133,22 +131,19 @@ const becomeOwner = async (req, res) => {
                     (
                         name,
                         phone,
-                        email,
                         password_hash,
                         role
                     )
                     VALUES
-                    ($1,$2,$3,$4,'owner')
+                    ($1,$2,$3,'owner')
                     RETURNING
                         id,
                         name,
                         phone,
-                        email,
                         role`,
                     [
                         name,
                         phone,
-                        email || null,
                         passwordHash
                     ]
                 );
@@ -221,27 +216,24 @@ const becomeOwner = async (req, res) => {
             await client.query(
                 `UPDATE users
 
-                 SET
+                SET
                     role = 'owner',
-                    email = COALESCE($1, email),
-                    owner_code = $2,
-                    owner_ref = $3,
+                    owner_code = $1,
+                    owner_ref = $2,
                     next_offer_number = 1,
                     updated_at = NOW()
 
-                 WHERE id = $4
+                 WHERE id = $3
 
                  RETURNING
                     id,
                     name,
                     phone,
-                    email,
                     role,
                     owner_code,
                     owner_ref,
                     next_offer_number`,
                 [
-                    email || null,
                     ownerCode,
                     ownerRef,
                     user.id
@@ -270,8 +262,6 @@ const becomeOwner = async (req, res) => {
                 phone:
                     owner.phone,
 
-                email:
-                    owner.email,
 
                 ownerRef:
                     owner.owner_ref
