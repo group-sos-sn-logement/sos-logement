@@ -1,5 +1,8 @@
 const express = require("express");
 
+const {
+    becomeOwner
+} = require("../controllers/ownerController");
 
 const {
     register,
@@ -74,6 +77,20 @@ router.post(
     "/recovery/reset",
     resetPassword
 );
+
+router.post(
+    "/become-owner",
+    authenticateToken,
+    becomeOwner
+);
+
+router.post(
+    "/owner-request",
+    becomeOwner
+);
+
+
+
 
 
 module.exports = router;
