@@ -1,4 +1,5 @@
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const pool = require("../config/database");
 
 const {
@@ -164,7 +165,30 @@ const becomeOwner = async (req, res) => {
             user.owner_ref
         ) {
 
+            const accessToken =
+                jwt.sign(
+                    {
+                        id:
+                            user.id,
+
+                        phone:
+                            user.phone,
+
+                        role:
+                            "owner"
+                    },
+
+                    process.env.JWT_SECRET,
+
+                    {
+                        expiresIn:
+                            "7d"
+                    }
+                );
+
+
             await client.query("COMMIT");
+
 
             return res.json({
 
@@ -172,6 +196,8 @@ const becomeOwner = async (req, res) => {
 
                 message:
                     "Vous êtes déjà propriétaire",
+
+                accessToken,
 
                 user
 
@@ -245,6 +271,32 @@ const becomeOwner = async (req, res) => {
             updated.rows[0];
 
 
+        /* =================================================
+           CREATE NEW OWNER TOKEN
+        ================================================= */
+
+        const accessToken =
+            jwt.sign(
+                {
+                    id:
+                        owner.id,
+
+                    phone:
+                        owner.phone,
+
+                    role:
+                        "owner"
+                },
+
+                process.env.JWT_SECRET,
+
+                {
+                    expiresIn:
+                        "7d"
+                }
+            );
+
+
         await client.query("COMMIT");
 
 
@@ -261,7 +313,6 @@ const becomeOwner = async (req, res) => {
 
                 phone:
                     owner.phone,
-
 
                 ownerRef:
                     owner.owner_ref
@@ -307,12 +358,43 @@ const becomeOwner = async (req, res) => {
         }
 
 
+        /* =================================================
+           RESPONSE
+        ================================================= */
+
         res.status(201).json({
 
             success: true,
 
             message:
                 "Votre demande a été acceptée. Vous êtes maintenant propriétaire.",
+
+            accessToken,
+
+            user: {
+
+                id:
+                    owner.id,
+
+                name:
+                    owner.name,
+
+                phone:
+                    owner.phone,
+
+                role:
+                    owner.role,
+
+                owner_code:
+                    owner.owner_code,
+
+                owner_ref:
+                    owner.owner_ref,
+
+                next_offer_number:
+                    owner.next_offer_number
+
+            },
 
             owner: {
 
@@ -372,3 +454,4 @@ const becomeOwner = async (req, res) => {
 module.exports = {
     becomeOwner
 };
+
