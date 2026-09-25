@@ -1,10 +1,5 @@
 async function sendBudgetRequestEmail(request) {
-    console.log("📩 DEMANDE BUDGET REÇUE :", {
-        name: request.full_name,
-        email: request.email,
-        phone: request.phone
-    });
-
+    console.log("📩 DEMANDE BUDGET REÇUE :", request);
     return true;
 }
 
