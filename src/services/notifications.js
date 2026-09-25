@@ -2,21 +2,30 @@ const nodemailer = require("nodemailer");
 
 
 /* =========================================================
-   EMAIL
+   GMAIL
 ========================================================= */
 
 const transporter =
     nodemailer.createTransport({
 
-        service: "Gmail",
+        service: "gmail",
 
         auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
+
+            user:
+                process.env.EMAIL_USER,
+
+            pass:
+                process.env.EMAIL_PASSWORD
+
         }
 
     });
 
+
+/* =========================================================
+   EMAIL — PROPRIÉTAIRE
+========================================================= */
 
 async function sendOwnerEmail({
     name,
@@ -28,7 +37,7 @@ async function sendOwnerEmail({
     await transporter.sendMail({
 
         from:
-            `"S.O.S LOGEMENT" <${process.env.SMTP_USER}>`,
+            `"S.O.S LOGEMENT" <${process.env.EMAIL_USER}>`,
 
         to:
             "sos.sn.logement@gmail.com",
@@ -68,13 +77,6 @@ async function sendOwnerEmail({
                     ${ownerRef}
                 </p>
 
-                <hr>
-
-                <p>
-                    Le propriétaire peut maintenant
-                    se connecter et ajouter ses biens.
-                </p>
-
             </div>
         `
 
@@ -98,18 +100,14 @@ async function sendOwnerWhatsApp({
         !process.env.WHATSAPP_PHONE_NUMBER_ID
     ) {
 
-        console.warn(
-            "⚠️ WhatsApp non configuré"
-        );
+        console.warn("⚠️ WhatsApp non configuré");
 
         return;
 
     }
 
-
     const recipient =
         phone.replace(/\D/g, "");
-
 
     const message =
 
@@ -126,7 +124,6 @@ Vous pouvez maintenant revenir sur le site S.O.S LOGEMENT, vous connecter avec v
 « Ajouter un bien »
 
 Bienvenue dans S.O.S LOGEMENT.`;
-
 
     const response =
         await fetch(
@@ -166,10 +163,8 @@ Bienvenue dans S.O.S LOGEMENT.`;
             }
         );
 
-
     const data =
         await response.json();
-
 
     if (!response.ok) {
 
@@ -184,109 +179,120 @@ Bienvenue dans S.O.S LOGEMENT.`;
 
     }
 
-
     return data;
 
 }
 
-const sendBudgetRequestEmail = async (request) => {
 
-    const transporter =
-        nodemailer.createTransport({
+/* =========================================================
+   EMAIL — DEMANDE SELON LE BUDGET
+========================================================= */
 
-            service: "gmail",
-
-            auth: {
-
-                user:
-                    process.env.SMTP_USER,
-
-                pass:
-                    process.env.SMTP_PASS
-
-            }
-
-        });
-
+async function sendBudgetRequestEmail(request) {
 
     await transporter.sendMail({
 
         from:
-            `"S.O.S LOGEMENT" <${process.env.SMTP_USER}>`,
+            `"S.O.S LOGEMENT" <${process.env.EMAIL_USER}>`,
 
         to:
-            process.env.SMTP_USER,
+            process.env.EMAIL_USER,
 
         subject:
             `Nouvelle demande de logement — ${request.full_name}`,
 
         html: `
 
-            <h2>🏠 Nouvelle demande de logement</h2>
+            <div style="
+                font-family: Arial, sans-serif;
+                max-width: 700px;
+                margin: auto;
+                padding: 30px;
+            ">
 
-            <hr>
+                <h2>
+                    🏠 Nouvelle demande de logement
+                </h2>
 
-            <p>
-                <strong>Nom :</strong>
-                ${request.full_name}
-            </p>
+                <hr>
 
-            <p>
-                <strong>E-mail :</strong>
-                ${request.email}
-            </p>
+                <p>
+                    <strong>Nom :</strong>
+                    ${request.full_name}
+                </p>
 
-            <p>
-                <strong>Téléphone :</strong>
-                ${request.phone}
-            </p>
+                <p>
+                    <strong>E-mail :</strong>
+                    ${request.email}
+                </p>
 
-            <p>
-                <strong>Zone recherchée :</strong>
-                ${request.zone}
-            </p>
+                <p>
+                    <strong>Téléphone :</strong>
+                    ${request.phone}
+                </p>
 
-            <p>
-                <strong>Type de logement :</strong>
-                ${request.house_type}
-            </p>
+                <p>
+                    <strong>Zone recherchée :</strong>
+                    ${request.zone}
+                </p>
 
-            <p>
-                <strong>Budget :</strong>
-                ${request.budget}
-            </p>
+                <p>
+                    <strong>Type de logement :</strong>
+                    ${request.house_type}
+                </p>
 
-            <p>
-                <strong>Profil :</strong>
-                ${request.user_type}
-            </p>
+                <p>
+                    <strong>Budget :</strong>
+                    ${request.budget}
+                </p>
 
-            <p>
-                <strong>Nombre d'étudiants :</strong>
-                ${request.students_number || "Non précisé"}
-            </p>
+                <p>
+                    <strong>Profil :</strong>
+                    ${request.user_type}
+                </p>
 
-            <p>
-                <strong>Note :</strong>
-                ${request.note || "Aucune note"}
-            </p>
+                <p>
+                    <strong>Nombre d'étudiants :</strong>
+                    ${request.students_number || "Non précisé"}
+                </p>
 
-            <hr>
+                <p>
+                    <strong>Note :</strong>
+                    ${request.note || "Aucune note"}
+                </p>
 
-            <p>
-                <strong>Date :</strong>
-                ${request.created_at}
-            </p>
+                <hr>
+
+                <p>
+                    <strong>Date :</strong>
+                    ${request.created_at}
+                </p>
+
+                <hr>
+
+                <p>
+                    <strong>S.O.S LOGEMENT</strong>
+                </p>
+
+            </div>
 
         `
 
     });
 
-};
+}
 
+
+/* =========================================================
+   EXPORTS
+========================================================= */
 
 module.exports = {
+
     sendOwnerEmail,
+
     sendOwnerWhatsApp,
+
     sendBudgetRequestEmail
+
 };
