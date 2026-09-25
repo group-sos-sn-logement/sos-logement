@@ -285,11 +285,8 @@ const sendBudgetRequestEmail = async (request) => {
 };
 
 
-module.exports.sendBudgetRequestEmail =
-    sendBudgetRequestEmail;
-
-
 module.exports = {
     sendOwnerEmail,
-    sendOwnerWhatsApp
+    sendOwnerWhatsApp,
+    sendBudgetRequestEmail
 };
