@@ -189,6 +189,105 @@ Bienvenue dans S.O.S LOGEMENT.`;
 
 }
 
+const sendBudgetRequestEmail = async (request) => {
+
+    const transporter =
+        nodemailer.createTransport({
+
+            service: "gmail",
+
+            auth: {
+
+                user:
+                    process.env.SMTP_USER,
+
+                pass:
+                    process.env.SMTP_PASS
+
+            }
+
+        });
+
+
+    await transporter.sendMail({
+
+        from:
+            `"S.O.S LOGEMENT" <${process.env.SMTP_USER}>`,
+
+        to:
+            process.env.SMTP_USER,
+
+        subject:
+            `Nouvelle demande de logement — ${request.full_name}`,
+
+        html: `
+
+            <h2>🏠 Nouvelle demande de logement</h2>
+
+            <hr>
+
+            <p>
+                <strong>Nom :</strong>
+                ${request.full_name}
+            </p>
+
+            <p>
+                <strong>E-mail :</strong>
+                ${request.email}
+            </p>
+
+            <p>
+                <strong>Téléphone :</strong>
+                ${request.phone}
+            </p>
+
+            <p>
+                <strong>Zone recherchée :</strong>
+                ${request.zone}
+            </p>
+
+            <p>
+                <strong>Type de logement :</strong>
+                ${request.house_type}
+            </p>
+
+            <p>
+                <strong>Budget :</strong>
+                ${request.budget}
+            </p>
+
+            <p>
+                <strong>Profil :</strong>
+                ${request.user_type}
+            </p>
+
+            <p>
+                <strong>Nombre d'étudiants :</strong>
+                ${request.students_number || "Non précisé"}
+            </p>
+
+            <p>
+                <strong>Note :</strong>
+                ${request.note || "Aucune note"}
+            </p>
+
+            <hr>
+
+            <p>
+                <strong>Date :</strong>
+                ${request.created_at}
+            </p>
+
+        `
+
+    });
+
+};
+
+
+module.exports.sendBudgetRequestEmail =
+    sendBudgetRequestEmail;
+
 
 module.exports = {
     sendOwnerEmail,
