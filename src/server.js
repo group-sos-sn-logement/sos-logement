@@ -12,6 +12,7 @@ const authRoutes = require("./routes/authRoutes");
 
 const budgetRoutes = require("./routes/budgetRoutes");
 
+const propertyRoutes = require("./routes/propertyRoutes");
 
 
 
@@ -23,6 +24,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth", authRoutes);
 
 app.use("/api/budget-requests", budgetRoutes);
+
+app.use("/api/properties", propertyRoutes);
 
 
 
