@@ -14,6 +14,7 @@ const budgetRoutes = require("./routes/budgetRoutes");
 
 const propertyRoutes = require("./routes/propertyRoutes");
 
+const adminRoutes = require("./routes/adminRoutes");
 
 
 app.use(helmet());
@@ -27,7 +28,7 @@ app.use("/api/budget-requests", budgetRoutes);
 
 app.use("/api/properties", propertyRoutes);
 
-
+app.use("/api/admin", adminRoutes);
 
 
 
