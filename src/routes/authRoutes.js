@@ -1,96 +1,33 @@
 const express = require("express");
 
-const {
-    becomeOwner
-} = require("../controllers/ownerController");
+const router = express.Router();
 
 const {
     register,
     login,
+    adminLogin,
     me
 } = require("../controllers/authController");
-
-
-const {
-    requestRecovery,
-    verifyRecoveryCode,
-    resetPassword
-} = require("../controllers/recoveryController");
-
 
 const {
     authenticateToken
 } = require("../middleware/authMiddleware");
 
 
-const router = express.Router();
+/* INSCRIPTION NORMALE */
+router.post("/register", register);
 
 
-/* =========================================================
-   REGISTER
-========================================================= */
-
-router.post(
-    "/register",
-    register
-);
+/* CONNEXION NORMALE */
+router.post("/login", login);
 
 
-/* =========================================================
-   LOGIN
-========================================================= */
-
-router.post(
-    "/login",
-    login
-);
+/* CONNEXION ADMIN */
+router.post("/admin-login", adminLogin);
 
 
-/* =========================================================
-   CURRENT USER
-========================================================= */
-
-router.get(
-    "/me",
-    authenticateToken,
-    me
-);
-
-
-/* =========================================================
-   RECOVERY
-========================================================= */
-
-router.post(
-    "/recovery/request",
-    requestRecovery
-);
-
-
-router.post(
-    "/recovery/verify",
-    verifyRecoveryCode
-);
-
-
-router.post(
-    "/recovery/reset",
-    resetPassword
-);
-
-router.post(
-    "/become-owner",
-    authenticateToken,
-    becomeOwner
-);
-
-router.post(
-    "/owner-request",
-    becomeOwner
-);
-
-
-
+/* UTILISATEUR CONNECTÉ */
+router.get("/me", authenticateToken, me);
 
 
 module.exports = router;

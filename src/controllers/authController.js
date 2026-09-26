@@ -4,10 +4,12 @@ const pool = require("../config/database");
 
 
 /* =========================================================
-   REGISTER
+   REGISTER — UTILISATEURS NORMAUX
+   name + phone + password + role
 ========================================================= */
 
 const register = async (req, res) => {
+
     try {
 
         const {
@@ -18,32 +20,38 @@ const register = async (req, res) => {
         } = req.body;
 
 
-        if (
-            !name ||
-            !phone ||
-            !password ||
-            !role
-        ) {
+        if (!name || !phone || !password || !role) {
+
             return res.status(400).json({
                 error: "Tous les champs sont obligatoires"
             });
+
         }
 
 
-        if (
-            !["seeker", "student"].includes(role)
-        ) {
+        /* -----------------------------------------
+           ROLES AUTORISÉS À L'INSCRIPTION
+        ----------------------------------------- */
+
+        if (!["seeker", "student", "owner"].includes(role)) {
+
             return res.status(400).json({
                 error: "Type d'utilisateur invalide"
             });
+
         }
 
 
-        const existingUser =
-            await pool.query(
-                "SELECT id FROM users WHERE phone = $1",
-                [phone]
-            );
+        /* -----------------------------------------
+           TELEPHONE UNIQUE
+        ----------------------------------------- */
+
+        const existingUser = await pool.query(
+            `SELECT id
+             FROM users
+             WHERE phone = $1`,
+            [phone]
+        );
 
 
         if (existingUser.rows.length > 0) {
@@ -56,37 +64,41 @@ const register = async (req, res) => {
         }
 
 
+        /* -----------------------------------------
+           PASSWORD
+        ----------------------------------------- */
+
         const passwordHash =
-            await bcrypt.hash(
-                password,
-                12
-            );
+            await bcrypt.hash(password, 12);
 
 
-        const result =
-            await pool.query(
-                `INSERT INTO users
-                    (
-                        name,
-                        phone,
-                        password_hash,
-                        role
-                    )
-                 VALUES
-                    ($1, $2, $3, $4)
-                 RETURNING
-                    id,
+        /* -----------------------------------------
+           CREATION
+        ----------------------------------------- */
+
+        const result = await pool.query(
+            `INSERT INTO users
+                (
                     name,
                     phone,
-                    role,
-                    created_at`,
-                [
-                    name,
-                    phone,
-                    passwordHash,
+                    password_hash,
                     role
-                ]
-            );
+                )
+             VALUES
+                ($1, $2, $3, $4)
+             RETURNING
+                id,
+                name,
+                phone,
+                role,
+                created_at`,
+            [
+                name,
+                phone,
+                passwordHash,
+                role
+            ]
+        );
 
 
         res.status(201).json({
@@ -109,7 +121,6 @@ const register = async (req, res) => {
             error
         );
 
-
         res.status(500).json({
             error: "Erreur serveur"
         });
@@ -120,7 +131,9 @@ const register = async (req, res) => {
 
 
 /* =========================================================
-   LOGIN
+   LOGIN NORMAL
+   phone + password
+   seeker / student / owner
 ========================================================= */
 
 const login = async (req, res) => {
@@ -133,10 +146,6 @@ const login = async (req, res) => {
         } = req.body;
 
 
-        /* -----------------------------------------
-           VALIDATION
-        ----------------------------------------- */
-
         if (!phone || !password) {
 
             return res.status(400).json({
@@ -147,23 +156,18 @@ const login = async (req, res) => {
         }
 
 
-        /* -----------------------------------------
-           RECHERCHE UTILISATEUR
-        ----------------------------------------- */
-
-        const result =
-            await pool.query(
-                `SELECT
-                    id,
-                    name,
-                    phone,
-                    password_hash,
-                    role,
-                    is_active
-                 FROM users
-                 WHERE phone = $1`,
-                [phone]
-            );
+        const result = await pool.query(
+            `SELECT
+                id,
+                name,
+                phone,
+                password_hash,
+                role,
+                is_active
+             FROM users
+             WHERE phone = $1`,
+            [phone]
+        );
 
 
         if (result.rows.length === 0) {
@@ -176,13 +180,8 @@ const login = async (req, res) => {
         }
 
 
-        const user =
-            result.rows[0];
+        const user = result.rows[0];
 
-
-        /* -----------------------------------------
-           COMPTE DESACTIVE
-        ----------------------------------------- */
 
         if (!user.is_active) {
 
@@ -193,10 +192,6 @@ const login = async (req, res) => {
 
         }
 
-
-        /* -----------------------------------------
-           VERIFICATION PASSWORD
-        ----------------------------------------- */
 
         const passwordValid =
             await bcrypt.compare(
@@ -215,27 +210,18 @@ const login = async (req, res) => {
         }
 
 
-        /* -----------------------------------------
-           JWT
-        ----------------------------------------- */
+        const token = jwt.sign(
+            {
+                id: user.id,
+                phone: user.phone,
+                role: user.role
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "7d"
+            }
+        );
 
-        const token =
-            jwt.sign(
-                {
-                    id: user.id,
-                    phone: user.phone,
-                    role: user.role
-                },
-                process.env.JWT_SECRET,
-                {
-                    expiresIn: "7d"
-                }
-            );
-
-
-        /* -----------------------------------------
-           REPONSE
-        ----------------------------------------- */
 
         res.json({
 
@@ -264,6 +250,168 @@ const login = async (req, res) => {
             error
         );
 
+        res.status(500).json({
+            message:
+                "Erreur serveur"
+        });
+
+    }
+};
+
+
+
+/* =========================================================
+   ADMIN LOGIN
+   phone + email + password
+   ADMIN UNIQUEMENT
+========================================================= */
+
+const adminLogin = async (req, res) => {
+
+    try {
+
+        const {
+            phone,
+            email,
+            password
+        } = req.body;
+
+
+        /* -----------------------------------------
+           VALIDATION
+        ----------------------------------------- */
+
+        if (!phone || !email || !password) {
+
+            return res.status(400).json({
+                message:
+                    "Numéro de téléphone, email et mot de passe requis"
+            });
+
+        }
+
+
+        /* -----------------------------------------
+           RECHERCHE ADMIN
+        ----------------------------------------- */
+
+        const result = await pool.query(
+            `SELECT
+                id,
+                name,
+                phone,
+                email,
+                password_hash,
+                role,
+                is_active
+             FROM users
+             WHERE phone = $1
+               AND email = $2
+               AND role = 'admin'
+             LIMIT 1`,
+            [
+                phone,
+                email
+            ]
+        );
+
+
+        if (result.rows.length === 0) {
+
+            return res.status(401).json({
+                message:
+                    "Identifiants administrateur incorrects"
+            });
+
+        }
+
+
+        const admin = result.rows[0];
+
+
+        /* -----------------------------------------
+           COMPTE ACTIF
+        ----------------------------------------- */
+
+        if (!admin.is_active) {
+
+            return res.status(403).json({
+                message:
+                    "Compte administrateur désactivé"
+            });
+
+        }
+
+
+        /* -----------------------------------------
+           PASSWORD
+        ----------------------------------------- */
+
+        const passwordValid =
+            await bcrypt.compare(
+                password,
+                admin.password_hash
+            );
+
+
+        if (!passwordValid) {
+
+            return res.status(401).json({
+                message:
+                    "Identifiants administrateur incorrects"
+            });
+
+        }
+
+
+        /* -----------------------------------------
+           JWT ADMIN
+        ----------------------------------------- */
+
+        const token = jwt.sign(
+            {
+                id: admin.id,
+                phone: admin.phone,
+                role: "admin"
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "8h"
+            }
+        );
+
+
+        /* -----------------------------------------
+           REPONSE
+        ----------------------------------------- */
+
+        res.json({
+
+            success: true,
+
+            message:
+                "Connexion administrateur réussie",
+
+            accessToken:
+                token,
+
+            user: {
+                id: admin.id,
+                name: admin.name,
+                phone: admin.phone,
+                email: admin.email,
+                role: admin.role
+            }
+
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            "ADMIN LOGIN ERROR:",
+            error
+        );
 
         res.status(500).json({
             message:
@@ -272,6 +420,7 @@ const login = async (req, res) => {
 
     }
 };
+
 
 
 /* =========================================================
@@ -314,5 +463,6 @@ const me = async (req, res) => {
 module.exports = {
     register,
     login,
+    adminLogin,
     me
 };
