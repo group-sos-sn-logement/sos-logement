@@ -459,10 +459,87 @@ const me = async (req, res) => {
 
 };
 
+/* =========================================================
+   BECOME OWNER
+========================================================= */
+
+const becomeOwner = async (req, res) => {
+
+    try {
+
+        const userId = req.user.id;
+
+        const result = await pool.query(
+            `
+            UPDATE users
+            SET role = 'owner'
+            WHERE id = $1
+            RETURNING
+                id,
+                name,
+                phone,
+                email,
+                role,
+                is_active
+            `,
+            [userId]
+        );
+
+
+        if (result.rows.length === 0) {
+
+            return res.status(404).json({
+                success: false,
+                message: "Utilisateur introuvable."
+            });
+
+        }
+
+
+        const user = result.rows[0];
+
+
+        res.json({
+
+            success: true,
+
+            message:
+                "Votre compte propriétaire est maintenant activé.",
+
+            user,
+
+            owner: {
+                ownerRef: `OWNER-${user.id}`
+            }
+
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            "Erreur becomeOwner :",
+            error
+        );
+
+        res.status(500).json({
+
+            success: false,
+
+            message:
+                "Erreur serveur."
+
+        });
+
+    }
+
+};
+
 
 module.exports = {
     register,
     login,
     adminLogin,
-    me
+    me,
+    becomeOwner
 };
