@@ -2,27 +2,34 @@ const express = require("express");
 
 const router = express.Router();
 
-
 const {
     authenticateToken,
     requireRole
 } = require("../middleware/authMiddleware");
 
-
 const {
-    createProperty
+    createProperty,
+    getApprovedProperties
 } = require("../controllers/propertyController");
-
 
 const {
     addPropertyImages
 } = require("../controllers/propertyImageController");
 
 
-// ======================================================
-// CRÉER UNE PROPRIÉTÉ
-// ======================================================
+// =====================================================
+// GET — العروض المعتمدة فقط للزوار
+// =====================================================
+router.get(
+    "/",
+    getApprovedProperties
+);
 
+
+// =====================================================
+// POST — إضافة عقار
+// المالك فقط
+// =====================================================
 router.post(
     "/",
     authenticateToken,
@@ -31,10 +38,10 @@ router.post(
 );
 
 
-// ======================================================
-// AJOUTER LES IMAGES D'UNE PROPRIÉTÉ
-// ======================================================
-
+// =====================================================
+// POST — إضافة صور العقار
+// المالك فقط
+// =====================================================
 router.post(
     "/:id/images",
     authenticateToken,
