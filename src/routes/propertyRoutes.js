@@ -20,6 +20,63 @@ const {
     addPropertyImages
 } = require("../controllers/propertyImageController");
 
+// =====================================================
+// ADMIN — PROPERTY CONTROL
+// =====================================================
+
+const {
+    updateProperty,
+    hideProperty,
+    deleteProperty,
+    deletePropertyImage,
+    setCover
+} = require("../controllers/adminPropertyController");
+
+
+// MODIFIER
+router.put(
+    "/:id",
+    authenticateToken,
+    requireRole("admin"),
+    updateProperty
+);
+
+
+// MASQUER
+router.put(
+    "/:id/hide",
+    authenticateToken,
+    requireRole("admin"),
+    hideProperty
+);
+
+
+// SUPPRIMER LE BIEN
+router.delete(
+    "/:id",
+    authenticateToken,
+    requireRole("admin"),
+    deleteProperty
+);
+
+
+// SUPPRIMER UNE IMAGE
+router.delete(
+    "/:id/images/:imageId",
+    authenticateToken,
+    requireRole("admin"),
+    deletePropertyImage
+);
+
+
+// IMAGE PRINCIPALE
+router.put(
+    "/:id/cover",
+    authenticateToken,
+    requireRole("admin"),
+    setCover
+);
+
 
 // =====================================================
 // GET — العروض المعتمدة فقط للزوار
