@@ -58,6 +58,18 @@ router.post(
 // =====================================================
 router.get("/code/:code", getPropertyByCode);
 
+// =====================================================
+// ADMIN — APPROVED PROPERTIES
+// =====================================================
+
+router.get(
+    "/approved",
+    authenticateToken,
+    requireRole("admin"),
+    getApprovedProperties
+);
+
+
 router.get(
     "/pending",
     authenticateToken,
