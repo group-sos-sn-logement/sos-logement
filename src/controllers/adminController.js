@@ -16,6 +16,8 @@ const getAllOwners = async (req, res) => {
                 phone,
                 email,
                 role,
+                owner_ref,
+                owner_code,
                 is_active
             FROM users
             WHERE role = 'owner'
