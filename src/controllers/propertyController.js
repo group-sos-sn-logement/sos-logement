@@ -271,11 +271,188 @@ async function getApprovedProperties(req, res) {
 
 }
 
+// =====================================================
+// GET PENDING PROPERTIES — ADMIN
+// =====================================================
+
+async function getPendingProperties(req, res) {
+
+    try {
+
+        const result = await pool.query(`
+            SELECT
+                p.id,
+                p.owner_id,
+                p.title,
+                p.type,
+                p.description,
+                p.city,
+                p.exact_location,
+                p.price_type,
+                p.price_month,
+                p.price_week,
+                p.price_day,
+                p.chambres,
+                p.cuisine,
+                p.sdb,
+                p.salon,
+                p.surface,
+                p.commission,
+                p.is_student,
+                p.max_students,
+                p.status,
+                p.created_at,
+
+                u.name AS owner_name,
+                u.phone AS owner_phone,
+                u.owner_ref,
+
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', pi.id,
+                            'url', pi.url,
+                            'public_id', pi.public_id,
+                            'resource_type', pi.resource_type
+                        )
+                        ORDER BY pi.id ASC
+                    )
+                    FILTER (WHERE pi.id IS NOT NULL),
+                    '[]'::json
+                ) AS images
+
+            FROM properties p
+
+            LEFT JOIN users u
+                ON u.id = p.owner_id
+
+            LEFT JOIN property_images pi
+                ON pi.property_id = p.id
+
+            WHERE p.status = 'pending'
+
+            GROUP BY p.id, u.id
+
+            ORDER BY p.created_at DESC
+        `);
+
+        return res.json(result.rows);
+
+    } catch (error) {
+
+        console.error("❌ GET PENDING PROPERTIES:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors du chargement des biens en attente"
+        });
+
+    }
+}
+
+
+// =====================================================
+// APPROVE PROPERTY — ADMIN
+// =====================================================
+
+async function approveProperty(req, res) {
+
+    try {
+
+        const propertyId = Number(req.params.id);
+
+        const result = await pool.query(`
+            UPDATE properties
+            SET
+                status = 'approved',
+                updated_at = NOW()
+            WHERE id = $1
+              AND status = 'pending'
+            RETURNING *
+        `, [propertyId]);
+
+        if (result.rows.length === 0) {
+
+            return res.status(404).json({
+                success: false,
+                message: "Bien introuvable ou déjà traité"
+            });
+
+        }
+
+        return res.json({
+            success: true,
+            message: "Bien approuvé et publié.",
+            property: result.rows[0]
+        });
+
+    } catch (error) {
+
+        console.error("❌ APPROVE PROPERTY:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors de l'approbation"
+        });
+
+    }
+}
+
+
+// =====================================================
+// REJECT PROPERTY — ADMIN
+// =====================================================
+
+async function rejectProperty(req, res) {
+
+    try {
+
+        const propertyId = Number(req.params.id);
+
+        const result = await pool.query(`
+            UPDATE properties
+            SET
+                status = 'rejected',
+                updated_at = NOW()
+            WHERE id = $1
+              AND status = 'pending'
+            RETURNING *
+        `, [propertyId]);
+
+        if (result.rows.length === 0) {
+
+            return res.status(404).json({
+                success: false,
+                message: "Bien introuvable ou déjà traité"
+            });
+
+        }
+
+        return res.json({
+            success: true,
+            message: "Bien refusé.",
+            property: result.rows[0]
+        });
+
+    } catch (error) {
+
+        console.error("❌ REJECT PROPERTY:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors du refus"
+        });
+
+    }
+}
+
 
 module.exports = {
 
     createProperty,
-
-    getApprovedProperties
+    getApprovedProperties,
+    getPendingProperties,
+    approveProperty,
+    rejectProperty
 
 };

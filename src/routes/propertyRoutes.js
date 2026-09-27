@@ -9,7 +9,10 @@ const {
 
 const {
     createProperty,
-    getApprovedProperties
+    getApprovedProperties,
+    getPendingProperties,
+    approveProperty,
+    rejectProperty
 } = require("../controllers/propertyController");
 
 const {
@@ -47,6 +50,41 @@ router.post(
     authenticateToken,
     requireRole("owner"),
     addPropertyImages
+);
+
+// =====================================================
+// ADMIN — PENDING PROPERTIES
+// =====================================================
+
+router.get(
+    "/pending",
+    authenticateToken,
+    requireRole("admin"),
+    getPendingProperties
+);
+
+
+// =====================================================
+// ADMIN — APPROVE
+// =====================================================
+
+router.patch(
+    "/:id/approve",
+    authenticateToken,
+    requireRole("admin"),
+    approveProperty
+);
+
+
+// =====================================================
+// ADMIN — REJECT
+// =====================================================
+
+router.patch(
+    "/:id/reject",
+    authenticateToken,
+    requireRole("admin"),
+    rejectProperty
 );
 
 
