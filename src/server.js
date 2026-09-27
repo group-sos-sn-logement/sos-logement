@@ -18,6 +18,10 @@ const adminRoutes = require("./routes/adminRoutes");
 
 const ownerRoutes = require("./routes/ownerRoutes");
 
+const ownerHiddenPropertyRoutes =
+    require("./routes/ownerHiddenPropertyRoutes");
+
+
 
 
 app.use(helmet());
@@ -35,7 +39,10 @@ app.use("/api/admin", adminRoutes);
 
 app.use("/api/owner", ownerRoutes);
 
-
+app.use(
+    "/api/owner",
+    ownerHiddenPropertyRoutes
+);
 
 
 
