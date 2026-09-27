@@ -446,6 +446,53 @@ async function rejectProperty(req, res) {
     }
 }
 
+const getPropertyByCode = async (req, res) => {
+    try {
+        const { code } = req.params;
+
+        const result = await pool.query(
+            `
+            SELECT
+                p.*,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', pi.id,
+                            'url', pi.url,
+                            'type', pi.type
+                        )
+                        ORDER BY pi.id
+                    ) FILTER (WHERE pi.id IS NOT NULL),
+                    '[]'
+                ) AS images
+            FROM properties p
+            LEFT JOIN property_images pi
+                ON pi.property_id = p.id
+            WHERE p.property_code = $1
+              AND p.status = 'approved'
+            GROUP BY p.id
+            `,
+            [code]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Bien introuvable"
+            });
+        }
+
+        res.json(result.rows[0]);
+
+    } catch (error) {
+        console.error("GET PROPERTY BY CODE ERROR:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Erreur serveur"
+        });
+    }
+};
 
 module.exports = {
 
@@ -453,6 +500,7 @@ module.exports = {
     getApprovedProperties,
     getPendingProperties,
     approveProperty,
-    rejectProperty
+    rejectProperty,
+    getPropertyByCode
 
 };

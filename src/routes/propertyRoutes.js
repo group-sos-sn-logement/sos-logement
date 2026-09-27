@@ -12,7 +12,8 @@ const {
     getApprovedProperties,
     getPendingProperties,
     approveProperty,
-    rejectProperty
+    rejectProperty,
+    getPropertyByCode
 } = require("../controllers/propertyController");
 
 const {
@@ -55,6 +56,7 @@ router.post(
 // =====================================================
 // ADMIN — PENDING PROPERTIES
 // =====================================================
+router.get("/code/:code", getPropertyByCode);
 
 router.get(
     "/pending",
