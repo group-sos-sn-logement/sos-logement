@@ -16,6 +16,9 @@ const propertyRoutes = require("./routes/propertyRoutes");
 
 const adminRoutes = require("./routes/adminRoutes");
 
+const ownerRoutes = require("./routes/ownerRoutes");
+
+
 
 app.use(helmet());
 app.use(cors());
@@ -30,7 +33,7 @@ app.use("/api/properties", propertyRoutes);
 
 app.use("/api/admin", adminRoutes);
 
-
+app.use("/api/owner", ownerRoutes);
 
 
 
