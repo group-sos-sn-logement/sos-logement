@@ -1,5 +1,8 @@
 const pool = require("../config/database");
 
+const {
+    buildOfferReference
+} = require("../utils/ownerReference");
 
 // =====================================================
 // CREATE PROPERTY
@@ -7,7 +10,11 @@ const pool = require("../config/database");
 
 async function createProperty(req, res) {
 
+    const client = await pool.connect();
+
     try {
+
+        await client.query("BEGIN");
 
         const {
             title,
@@ -33,10 +40,61 @@ async function createProperty(req, res) {
         } = req.body;
 
 
-        const result = await pool.query(
+        /* =================================================
+           OWNER
+        ================================================= */
+
+        const ownerResult = await client.query(
+            `
+            SELECT
+                owner_code,
+                next_offer_number
+            FROM users
+            WHERE id = $1
+              AND role = 'owner'
+            FOR UPDATE
+            `,
+            [req.user.id]
+        );
+
+
+        if (ownerResult.rows.length === 0) {
+
+            await client.query("ROLLBACK");
+
+            return res.status(403).json({
+                success: false,
+                message: "Référence propriétaire introuvable"
+            });
+
+        }
+
+
+        const owner =
+            ownerResult.rows[0];
+
+
+        /* =================================================
+           PROPERTY REFERENCE
+        ================================================= */
+
+        const propertyReference =
+            buildOfferReference(
+                owner.owner_code,
+                owner.next_offer_number
+            );
+
+
+        /* =================================================
+           CREATE PROPERTY
+        ================================================= */
+
+        const result = await client.query(
             `
             INSERT INTO properties (
                 owner_id,
+                property_code,
+
                 title,
                 type,
                 description,
@@ -64,25 +122,27 @@ async function createProperty(req, res) {
             VALUES (
                 $1,
                 $2,
+
                 $3,
                 $4,
                 $5,
                 $6,
-
                 $7,
+
                 $8,
                 $9,
                 $10,
-
                 $11,
+
                 $12,
                 $13,
                 $14,
                 $15,
-
                 $16,
+
                 $17,
                 $18,
+                $19,
 
                 'pending'
             )
@@ -91,6 +151,7 @@ async function createProperty(req, res) {
             `,
             [
                 req.user.id,
+                propertyReference,
 
                 title,
                 type,
@@ -116,6 +177,28 @@ async function createProperty(req, res) {
         );
 
 
+        /* =================================================
+           INCREMENT NEXT PROPERTY NUMBER
+        ================================================= */
+
+        await client.query(
+            `
+            UPDATE users
+            SET
+                next_offer_number =
+                    next_offer_number + 1,
+
+                updated_at = NOW()
+
+            WHERE id = $1
+            `,
+            [req.user.id]
+        );
+
+
+        await client.query("COMMIT");
+
+
         return res.status(201).json({
 
             success: true,
@@ -123,12 +206,15 @@ async function createProperty(req, res) {
             message:
                 "Propriété créée et envoyée pour validation",
 
-            property: result.rows[0]
+            property:
+                result.rows[0]
 
         });
 
 
     } catch (error) {
+
+        await client.query("ROLLBACK");
 
         console.error(
             "❌ CREATE PROPERTY:",
@@ -143,6 +229,10 @@ async function createProperty(req, res) {
                 "Erreur lors de la création de la propriété"
 
         });
+
+    } finally {
+
+        client.release();
 
     }
 
@@ -167,6 +257,9 @@ async function getApprovedProperties(req, res) {
 
                 p.id,
                 p.owner_id,
+                p.property_code,
+
+                p.title,p.owner_id,
 
                 p.title,
                 p.type,
@@ -283,6 +376,7 @@ async function getPendingProperties(req, res) {
             SELECT
                 p.id,
                 p.owner_id,
+                p.property_code,
                 p.title,
                 p.type,
                 p.description,

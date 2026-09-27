@@ -2,6 +2,11 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const pool = require("../config/database");
 
+const {
+    numberToLetters,
+    buildOwnerReference
+} = require("../utils/ownerReference");
+
 
 /* =========================================================
    REGISTER — UTILISATEURS NORMAUX
@@ -32,26 +37,15 @@ const register = async (req, res) => {
         }
 
         const existingUser = await pool.query(
-            `SELECT
-                id,
-                name,
-                phone,
-                password_hash,
-                role,
-                is_active
-             FROM users
-             WHERE phone = $1`,
+            `
+            SELECT id
+            FROM users
+            WHERE phone = $1
+            `,
             [phone]
         );
 
-        /* =================================================
-           COMPTE EXISTANT
-        ================================================= */
-
         if (existingUser.rows.length > 0) {
-
-            const user = existingUser.rows[0];
-
             return res.status(409).json({
                 success: false,
                 message: "Ce numéro existe déjà",
@@ -59,67 +53,171 @@ const register = async (req, res) => {
             });
         }
 
-        /* =================================================
-           NOUVEAU COMPTE
-        ================================================= */
-
         const passwordHash =
             await bcrypt.hash(password, 12);
 
-        const result = await pool.query(
-            `INSERT INTO users
+        /* =========================================
+           UTILISATEUR NORMAL
+        ========================================= */
+
+        if (role !== "owner") {
+
+            const result = await pool.query(
+                `
+                INSERT INTO users
                 (
                     name,
                     phone,
                     password_hash,
                     role
                 )
-             VALUES
-                ($1, $2, $3, 'owner')
-             RETURNING
-                id,
-                name,
-                phone,
-                role,
-                is_active`,
-            [
-                name,
-                phone,
-                passwordHash
-            ]
-        );
+                VALUES
+                ($1, $2, $3, $4)
+                RETURNING
+                    id,
+                    name,
+                    phone,
+                    role,
+                    is_active
+                `,
+                [
+                    name,
+                    phone,
+                    passwordHash,
+                    role
+                ]
+            );
 
-        const user = result.rows[0];
+            const user = result.rows[0];
 
-        const token = jwt.sign(
-            {
-                id: user.id,
-                phone: user.phone,
-                role: "owner"
-            },
-            process.env.JWT_SECRET,
-            {
-                expiresIn: "7d"
-            }
-        );
+            const token = jwt.sign(
+                {
+                    id: user.id,
+                    phone: user.phone,
+                    role: user.role
+                },
+                process.env.JWT_SECRET,
+                {
+                    expiresIn: "7d"
+                }
+            );
 
-        return res.status(201).json({
+            return res.status(201).json({
+                success: true,
+                message: "Compte créé avec succès",
+                accessToken: token,
+                user
+            });
+        }
 
-            success: true,
+        /* =========================================
+           PROPRIÉTAIRE
+        ========================================= */
 
-            message:
-                "Compte propriétaire créé avec succès",
+        const client = await pool.connect();
 
-            accessToken: token,
+        try {
 
-            user
+            await client.query("BEGIN");
 
-        });
+            const sequenceResult = await client.query(
+                `
+                SELECT COUNT(*)::INTEGER AS count
+                FROM users
+                WHERE owner_code IS NOT NULL
+                FOR UPDATE
+                `
+            );
+
+            const ownerNumber =
+                sequenceResult.rows[0].count + 1;
+
+            const ownerCode =
+                numberToLetters(ownerNumber);
+
+            const ownerRef =
+                buildOwnerReference(ownerCode);
+
+            const result = await client.query(
+                `
+                INSERT INTO users
+                (
+                    name,
+                    phone,
+                    password_hash,
+                    role,
+                    owner_code,
+                    owner_ref,
+                    next_offer_number
+                )
+                VALUES
+                (
+                    $1,
+                    $2,
+                    $3,
+                    'owner',
+                    $4,
+                    $5,
+                    1
+                )
+                RETURNING
+                    id,
+                    name,
+                    phone,
+                    role,
+                    owner_code,
+                    owner_ref,
+                    next_offer_number,
+                    is_active
+                `,
+                [
+                    name,
+                    phone,
+                    passwordHash,
+                    ownerCode,
+                    ownerRef
+                ]
+            );
+
+            await client.query("COMMIT");
+
+            const user = result.rows[0];
+
+            const token = jwt.sign(
+                {
+                    id: user.id,
+                    phone: user.phone,
+                    role: "owner"
+                },
+                process.env.JWT_SECRET,
+                {
+                    expiresIn: "7d"
+                }
+            );
+
+            return res.status(201).json({
+                success: true,
+                message:
+                    "Compte propriétaire créé avec succès",
+                accessToken: token,
+                user
+            });
+
+        } catch (error) {
+
+            await client.query("ROLLBACK");
+            throw error;
+
+        } finally {
+
+            client.release();
+
+        }
 
     } catch (error) {
 
         console.error(
-            "REGISTER OWNER ERROR:",
+            "REGISTER ERROR:",
             error
         );
 
@@ -128,7 +226,6 @@ const register = async (req, res) => {
         });
     }
 };
-
 
 
 /* =========================================================
@@ -466,26 +563,109 @@ const me = async (req, res) => {
 
 const becomeOwner = async (req, res) => {
 
+    const client = await pool.connect();
+
     try {
+
+        await client.query("BEGIN");
 
         const userId = req.user.id;
 
-        const result = await pool.query(
+        const userResult = await client.query(
+            `
+            SELECT
+                id,
+                name,
+                phone,
+                email,
+                role,
+                owner_code,
+                owner_ref,
+                next_offer_number
+            FROM users
+            WHERE id = $1
+            FOR UPDATE
+            `,
+            [userId]
+        );
+
+        if (userResult.rows.length === 0) {
+
+            await client.query("ROLLBACK");
+
+            return res.status(404).json({
+                success: false,
+                message: "Utilisateur introuvable."
+            });
+        }
+
+        const user = userResult.rows[0];
+
+        let ownerCode = user.owner_code;
+        let ownerRef = user.owner_ref;
+        let nextOfferNumber = user.next_offer_number;
+
+        /* =========================================
+           DÉJÀ PROPRIÉTAIRE
+        ========================================= */
+
+        if (user.role === "owner" && ownerCode && ownerRef) {
+
+            await client.query("COMMIT");
+
+            const accessToken = jwt.sign(
+                {
+                    id: user.id,
+                    phone: user.phone,
+                    role: "owner"
+                },
+                process.env.JWT_SECRET,
+                {
+                    expiresIn: "7d"
+                }
+            );
+
+            return res.json({
+                success: true,
+                message: "Votre compte est déjà propriétaire.",
+                accessToken,
+                user
+            });
+        }
+
+        /* =========================================
+           NOUVEAU PROPRIÉTAIRE
+        ========================================= */
+
+        const countResult = await client.query(
+            `
+            SELECT COUNT(*)::INTEGER AS count
+            FROM users
+            WHERE owner_code IS NOT NULL
+            `
+        );
+
+        const ownerNumber =
+            countResult.rows[0].count + 1;
+
+        ownerCode =
+            numberToLetters(ownerNumber);
+
+        ownerRef =
+            buildOwnerReference(ownerCode);
+
+        nextOfferNumber = 1;
+
+        const result = await client.query(
             `
             UPDATE users
             SET
                 role = 'owner',
-                owner_code = COALESCE(
-                    owner_code,
-                    'OWNER-' || id
-                ),
-                owner_ref = COALESCE(
-                    owner_ref,
-                    'OWNER-' || id
-                ),
-                next_offer_number = 1,
+                owner_code = $1,
+                owner_ref = $2,
+                next_offer_number = $3,
                 updated_at = NOW()
-            WHERE id = $1
+            WHERE id = $4
             RETURNING
                 id,
                 name,
@@ -497,24 +677,22 @@ const becomeOwner = async (req, res) => {
                 next_offer_number,
                 is_active
             `,
-            [userId]
+            [
+                ownerCode,
+                ownerRef,
+                nextOfferNumber,
+                userId
+            ]
         );
 
-        if (result.rows.length === 0) {
+        await client.query("COMMIT");
 
-            return res.status(404).json({
-                success: false,
-                message: "Utilisateur introuvable."
-            });
-
-        }
-
-        const user = result.rows[0];
+        const updatedUser = result.rows[0];
 
         const accessToken = jwt.sign(
             {
-                id: user.id,
-                phone: user.phone,
+                id: updatedUser.id,
+                phone: updatedUser.phone,
                 role: "owner"
             },
             process.env.JWT_SECRET,
@@ -532,19 +710,21 @@ const becomeOwner = async (req, res) => {
 
             accessToken,
 
-            user,
+            user: updatedUser,
 
             owner: {
-                id: user.id,
-                name: user.name,
-                phone: user.phone,
+                id: updatedUser.id,
+                name: updatedUser.name,
+                phone: updatedUser.phone,
                 role: "owner",
-                ownerRef: user.owner_ref
+                ownerRef: updatedUser.owner_ref
             }
 
         });
 
     } catch (error) {
+
+        await client.query("ROLLBACK");
 
         console.error(
             "BECOME OWNER ERROR:",
@@ -555,6 +735,10 @@ const becomeOwner = async (req, res) => {
             success: false,
             message: "Erreur serveur."
         });
+
+    } finally {
+
+        client.release();
 
     }
 };

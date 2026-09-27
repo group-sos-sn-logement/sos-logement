@@ -1,6 +1,6 @@
 /* =========================================================
    OWNER REFERENCE SYSTEM
-   Excel-style: A ... Z ... AA ... AZ ... BA ...
+   A ... Z ... AA ... AB ...
 ========================================================= */
 
 function numberToLetters(number) {
@@ -26,24 +26,23 @@ function numberToLetters(number) {
 
 /* =========================================================
    OWNER REFERENCE
+   Exemple: soslogement-A0000
 ========================================================= */
 
 function buildOwnerReference(code) {
 
-    return `soslogement-${code}-0000`;
+    return `soslogement-${code}0000`;
 }
 
 
 /* =========================================================
-   OFFER REFERENCE
+   PROPERTY REFERENCE
+   Exemple: soslogement-A0001
 ========================================================= */
 
-function buildOfferReference(
-    code,
-    number
-) {
+function buildOfferReference(code, number) {
 
-    return `soslogement-${code}-${String(number).padStart(4, "0")}`;
+    return `soslogement-${code}${String(number).padStart(4, "0")}`;
 }
 
 
