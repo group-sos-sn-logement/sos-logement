@@ -19,62 +19,52 @@ const register = async (req, res) => {
             role
         } = req.body;
 
-
         if (!name || !phone || !password || !role) {
-
             return res.status(400).json({
-                error: "Tous les champs sont obligatoires"
+                message: "Tous les champs sont obligatoires"
             });
-
         }
-
-
-        /* -----------------------------------------
-           ROLES AUTORISÉS À L'INSCRIPTION
-        ----------------------------------------- */
 
         if (!["seeker", "student", "owner"].includes(role)) {
-
             return res.status(400).json({
-                error: "Type d'utilisateur invalide"
+                message: "Type d'utilisateur invalide"
             });
-
         }
 
-
-        /* -----------------------------------------
-           TELEPHONE UNIQUE
-        ----------------------------------------- */
-
         const existingUser = await pool.query(
-            `SELECT id
+            `SELECT
+                id,
+                name,
+                phone,
+                password_hash,
+                role,
+                is_active
              FROM users
              WHERE phone = $1`,
             [phone]
         );
 
+        /* =================================================
+           COMPTE EXISTANT
+        ================================================= */
 
         if (existingUser.rows.length > 0) {
 
-            return res.status(409).json({
-                error:
-                    "Ce numéro de téléphone est déjà utilisé"
-            });
+            const user = existingUser.rows[0];
 
+            return res.status(409).json({
+                success: false,
+                message: "Ce numéro existe déjà",
+                userExists: true
+            });
         }
 
-
-        /* -----------------------------------------
-           PASSWORD
-        ----------------------------------------- */
+        /* =================================================
+           NOUVEAU COMPTE
+        ================================================= */
 
         const passwordHash =
             await bcrypt.hash(password, 12);
-
-
-        /* -----------------------------------------
-           CREATION
-        ----------------------------------------- */
 
         const result = await pool.query(
             `INSERT INTO users
@@ -85,46 +75,57 @@ const register = async (req, res) => {
                     role
                 )
              VALUES
-                ($1, $2, $3, $4)
+                ($1, $2, $3, 'owner')
              RETURNING
                 id,
                 name,
                 phone,
                 role,
-                created_at`,
+                is_active`,
             [
                 name,
                 phone,
-                passwordHash,
-                role
+                passwordHash
             ]
         );
 
+        const user = result.rows[0];
 
-        res.status(201).json({
+        const token = jwt.sign(
+            {
+                id: user.id,
+                phone: user.phone,
+                role: "owner"
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "7d"
+            }
+        );
+
+        return res.status(201).json({
 
             success: true,
 
             message:
-                "Compte créé avec succès",
+                "Compte propriétaire créé avec succès",
 
-            user:
-                result.rows[0]
+            accessToken: token,
+
+            user
 
         });
-
 
     } catch (error) {
 
         console.error(
-            "REGISTER ERROR:",
+            "REGISTER OWNER ERROR:",
             error
         );
 
-        res.status(500).json({
-            error: "Erreur serveur"
+        return res.status(500).json({
+            message: "Erreur serveur"
         });
-
     }
 };
 
