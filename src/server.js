@@ -21,6 +21,7 @@ const ownerRoutes = require("./routes/ownerRoutes");
 const ownerHiddenPropertyRoutes =
     require("./routes/ownerHiddenPropertyRoutes");
 
+const housingRequestRoutes = require("./routes/housingRequestRoutes");   
 
 
 
@@ -44,7 +45,7 @@ app.use(
     ownerHiddenPropertyRoutes
 );
 
-
+app.use("/api/housing-requests", housingRequestRoutes);
 
 
 app.get("/", (req, res) => {
