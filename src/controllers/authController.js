@@ -472,7 +472,18 @@ const becomeOwner = async (req, res) => {
         const result = await pool.query(
             `
             UPDATE users
-            SET role = 'owner'
+            SET
+                role = 'owner',
+                owner_code = COALESCE(
+                    owner_code,
+                    'OWNER-' || id
+                ),
+                owner_ref = COALESCE(
+                    owner_ref,
+                    'OWNER-' || id
+                ),
+                next_offer_number = 1,
+                updated_at = NOW()
             WHERE id = $1
             RETURNING
                 id,
@@ -480,11 +491,13 @@ const becomeOwner = async (req, res) => {
                 phone,
                 email,
                 role,
+                owner_code,
+                owner_ref,
+                next_offer_number,
                 is_active
             `,
             [userId]
         );
-
 
         if (result.rows.length === 0) {
 
@@ -495,44 +508,54 @@ const becomeOwner = async (req, res) => {
 
         }
 
-
         const user = result.rows[0];
 
+        const accessToken = jwt.sign(
+            {
+                id: user.id,
+                phone: user.phone,
+                role: "owner"
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "7d"
+            }
+        );
 
-        res.json({
+        return res.json({
 
             success: true,
 
             message:
-                "Votre compte propriétaire est maintenant activé.",
+                "Votre compte est maintenant propriétaire.",
+
+            accessToken,
 
             user,
 
             owner: {
-                ownerRef: `OWNER-${user.id}`
+                id: user.id,
+                name: user.name,
+                phone: user.phone,
+                role: "owner",
+                ownerRef: user.owner_ref
             }
 
         });
 
-
     } catch (error) {
 
         console.error(
-            "Erreur becomeOwner :",
+            "BECOME OWNER ERROR:",
             error
         );
 
-        res.status(500).json({
-
+        return res.status(500).json({
             success: false,
-
-            message:
-                "Erreur serveur."
-
+            message: "Erreur serveur."
         });
 
     }
-
 };
 
 

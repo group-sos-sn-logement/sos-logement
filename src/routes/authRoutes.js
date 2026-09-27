@@ -6,24 +6,12 @@ const {
     register,
     login,
     adminLogin,
-    me
-} = require("../controllers/authController");
-
-const {
-    authenticateToken
-} = require("../middleware/authMiddleware");
-
-const {
-    register,
-    login,
-    adminLogin,
     me,
     becomeOwner
 } = require("../controllers/authController");
 
 const {
-    authenticateToken,
-    requireRole
+    authenticateToken
 } = require("../middleware/authMiddleware");
 
 
@@ -49,22 +37,6 @@ router.post(
     authenticateToken,
     becomeOwner
 );
-
-
-/* INSCRIPTION NORMALE */
-router.post("/register", register);
-
-
-/* CONNEXION NORMALE */
-router.post("/login", login);
-
-
-/* CONNEXION ADMIN */
-router.post("/admin-login", adminLogin);
-
-
-/* UTILISATEUR CONNECTÉ */
-router.get("/me", authenticateToken, me);
 
 
 module.exports = router;
