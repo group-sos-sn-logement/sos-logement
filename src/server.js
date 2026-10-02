@@ -26,6 +26,13 @@ const housingRequestRoutes = require("./routes/housingRequestRoutes");
 const messageRoutes =
     require("./routes/messageRoutes");
 
+const adminPropertyRoutes =
+    require("./routes/adminPropertyRoutes");
+
+
+
+
+
 
 
 app.use(helmet());
@@ -55,7 +62,10 @@ app.use(
     messageRoutes
 );
 
-
+app.use(
+    "/api/admin",
+    adminPropertyRoutes
+);
 
 
 
