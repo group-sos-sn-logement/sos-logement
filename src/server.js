@@ -23,6 +23,9 @@ const ownerHiddenPropertyRoutes =
 
 const housingRequestRoutes = require("./routes/housingRequestRoutes");   
 
+const messageRoutes =
+    require("./routes/messageRoutes");
+
 
 
 app.use(helmet());
@@ -46,6 +49,16 @@ app.use(
 );
 
 app.use("/api/housing-requests", housingRequestRoutes);
+
+app.use(
+    "/api/messages",
+    messageRoutes
+);
+
+
+
+
+
 
 
 app.get("/", (req, res) => {
