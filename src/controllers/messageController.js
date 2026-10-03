@@ -479,12 +479,48 @@ async function deleteMessage(req, res) {
 
 }
 
+/* =========================================================
+   GET DIASPORA MESSAGES
+========================================================= */
+
+async function getDiasporaMessages(req, res) {
+
+    try {
+
+        const result = await pool.query(`
+            SELECT *
+            FROM messages
+            WHERE source = 'diaspora'
+            ORDER BY created_at DESC
+        `);
+
+        return res.json({
+            success: true,
+            messages: result.rows
+        });
+
+    } catch (error) {
+
+        console.error(
+            "❌ GET DIASPORA MESSAGES:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors du chargement des messages diaspora."
+        });
+
+    }
+
+}
 
 module.exports = {
 
     createMessage,
     getMessages,
     getMessage,
+    getDiasporaMessages,
     updateMessageStatus,
     replyMessage,
     deleteMessage

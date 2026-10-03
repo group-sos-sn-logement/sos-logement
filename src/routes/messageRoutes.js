@@ -11,6 +11,7 @@ const {
     createMessage,
     getMessages,
     getMessage,
+    getDiasporaMessages,
     updateMessageStatus,
     replyMessage,
     deleteMessage
@@ -86,5 +87,15 @@ router.delete(
     deleteMessage
 );
 
+/* =========================================================
+   ADMIN — DIASPORA ONLY
+========================================================= */
+
+router.get(
+    "/admin/diaspora",
+    authenticateToken,
+    requireRole("admin"),
+    getDiasporaMessages
+);
 
 module.exports = router;
