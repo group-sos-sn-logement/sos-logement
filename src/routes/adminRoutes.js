@@ -3,8 +3,10 @@ const express = require("express");
 const router = express.Router();
 
 const {
-    getAllOwners
+    getAllOwners,
+    getAllStudents
 } = require("../controllers/adminController");
+
 
 const {
     authenticateToken,
@@ -21,6 +23,13 @@ router.get(
     authenticateToken,
     requireRole("admin"),
     getAllOwners
+);
+
+router.get(
+    "/users/students",
+    authenticateToken,
+    requireRole("admin"),
+    getAllStudents
 );
 
 

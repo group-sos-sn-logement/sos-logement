@@ -38,6 +38,43 @@ const getAllOwners = async (req, res) => {
 };
 
 
+async function getAllStudents(req, res) {
+    try {
+
+        const result = await pool.query(`
+            SELECT
+                id,
+                name,
+                phone,
+                email,
+                role,
+                is_active,
+                created_at
+            FROM users
+            WHERE role = 'student'
+            ORDER BY created_at DESC
+        `);
+
+        return res.json({
+            success: true,
+            students: result.rows
+        });
+
+    } catch (error) {
+
+        console.error(
+            "GET ALL STUDENTS ERROR:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors du chargement des étudiants."
+        });
+    }
+}
+
 module.exports = {
-    getAllOwners
+    getAllOwners,
+    getAllStudents
 };
