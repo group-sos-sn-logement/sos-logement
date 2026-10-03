@@ -2,7 +2,9 @@ const express = require("express");
 
 const router = express.Router();
 
-const authMiddleware = require("../middleware/authMiddleware");
+const {
+    authenticateToken
+} = require("../middleware/authMiddleware");
 
 const {
     getAllHiddenProperties,
@@ -34,7 +36,7 @@ function adminOnly(req, res, next) {
 
 router.get(
     "/properties/hidden",
-    authMiddleware,
+    authenticateToken,
     adminOnly,
     getAllHiddenProperties
 );
@@ -44,7 +46,7 @@ router.get(
 
 router.patch(
     "/properties/:id/hide",
-    authMiddleware,
+    authenticateToken,
     adminOnly,
     adminHideProperty
 );
@@ -54,7 +56,7 @@ router.patch(
 
 router.patch(
     "/properties/:id/restore",
-    authMiddleware,
+    authenticateToken,
     adminOnly,
     adminRestoreProperty
 );
