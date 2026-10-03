@@ -34,6 +34,11 @@ async function getHiddenProperties(req, res) {
                 p.max_students,
                 p.status,
                 p.property_code,
+                p.owner_hidden,
+                p.admin_hidden,
+                p.hidden_by_admin,
+                p.hidden_at,
+                p.status_before_hidden,
                 p.created_at,
                 p.updated_at,
 
@@ -140,7 +145,7 @@ async function restoreProperty(req, res) {
             return res.status(403).json({
                 success: false,
                 message:
-                    "Ce bien a été masqué par l'administrateur. Seul l'administrateur peut le réactiver."
+                    "Ce bien ne peut pas être réactivé par le propriétaire. S'il a été masqué par l'administrateur, seul l'administrateur peut le réactiver."
             });
 
         }
