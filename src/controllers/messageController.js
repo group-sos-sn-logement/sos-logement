@@ -490,7 +490,14 @@ async function getDiasporaMessages(req, res) {
         const result = await pool.query(`
             SELECT *
             FROM messages
-            WHERE source_label = 'diaspora'
+            WHERE
+                source_label = 'diaspora'
+                OR
+                (
+                    source = 'project'
+                    AND details IS NOT NULL
+                    AND details::text ILIKE '%diaspora%'
+                )
             ORDER BY created_at DESC
         `);
 
@@ -502,20 +509,17 @@ async function getDiasporaMessages(req, res) {
     } catch (error) {
 
         console.error(
-            "❌ GET DIASPORA MESSAGES:",
+            "❌ GET DIASPORA MESSAGES ERROR:",
             error
         );
 
         return res.status(500).json({
             success: false,
-            message:
-                "Erreur lors du chargement des messages diaspora."
+            message: error.message
         });
 
     }
-
 }
-
 module.exports = {
 
     createMessage,
