@@ -106,15 +106,28 @@ async function restoreProperty(req, res) {
             UPDATE properties
 
             SET
-                status = 'pending',
+                status = COALESCE(
+                    status_before_hidden,
+                    'pending'
+                ),
+
+                owner_hidden = FALSE,
+
                 updated_at = CURRENT_TIMESTAMP
 
             WHERE
                 id = $1
                 AND owner_id = $2
                 AND status = 'hidden'
+                AND owner_hidden = TRUE
+                AND admin_hidden = FALSE
 
-            RETURNING id, property_code, status
+            RETURNING
+                id,
+                property_code,
+                status,
+                owner_hidden,
+                admin_hidden
             `,
             [
                 propertyId,
@@ -124,8 +137,10 @@ async function restoreProperty(req, res) {
 
         if (result.rows.length === 0) {
 
-            return res.status(404).json({
-                message: "Bien masqué introuvable ou non autorisé."
+            return res.status(403).json({
+                success: false,
+                message:
+                    "Ce bien a été masqué par l'administrateur. Seul l'administrateur peut le réactiver."
             });
 
         }
