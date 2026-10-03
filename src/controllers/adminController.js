@@ -74,7 +74,44 @@ async function getAllStudents(req, res) {
     }
 }
 
+async function getAllSeekers(req, res) {
+    try {
+
+        const result = await pool.query(`
+            SELECT
+                id,
+                name,
+                phone,
+                email,
+                role,
+                is_active,
+                created_at
+            FROM users
+            WHERE role = 'seeker'
+            ORDER BY created_at DESC
+        `);
+
+        return res.json({
+            success: true,
+            seekers: result.rows
+        });
+
+    } catch (error) {
+
+        console.error(
+            "GET ALL SEEKERS ERROR:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors du chargement des chercheurs."
+        });
+    }
+}
+
 module.exports = {
     getAllOwners,
-    getAllStudents
+    getAllStudents,
+    getAllSeekers
 };

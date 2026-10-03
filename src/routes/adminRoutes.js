@@ -4,7 +4,8 @@ const router = express.Router();
 
 const {
     getAllOwners,
-    getAllStudents
+    getAllStudents,
+    getAllSeekers
 } = require("../controllers/adminController");
 
 
@@ -32,5 +33,12 @@ router.get(
     getAllStudents
 );
 
+
+router.get(
+    "/users/seekers",
+    authenticateToken,
+    requireRole("admin"),
+    getAllSeekers
+);
 
 module.exports = router;
