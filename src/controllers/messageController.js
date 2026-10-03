@@ -490,7 +490,7 @@ async function getDiasporaMessages(req, res) {
         const result = await pool.query(`
             SELECT *
             FROM messages
-            WHERE source = 'diaspora'
+            WHERE source_label = 'diaspora'
             ORDER BY created_at DESC
         `);
 
@@ -508,7 +508,8 @@ async function getDiasporaMessages(req, res) {
 
         return res.status(500).json({
             success: false,
-            message: "Erreur lors du chargement des messages diaspora."
+            message:
+                "Erreur lors du chargement des messages diaspora."
         });
 
     }
