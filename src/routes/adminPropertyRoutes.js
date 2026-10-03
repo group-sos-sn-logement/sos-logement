@@ -3,7 +3,8 @@ const express = require("express");
 const router = express.Router();
 
 const {
-    authenticateToken
+    authenticateToken,
+    requireRole
 } = require("../middleware/authMiddleware");
 
 const {
@@ -14,50 +15,37 @@ const {
 
 
 /* =========================================================
-   ADMIN ONLY
+   BIENS MASQUÉS
 ========================================================= */
-
-function adminOnly(req, res, next) {
-
-    if (!req.user || req.user.role !== "admin") {
-
-        return res.status(403).json({
-            success: false,
-            message: "Accès réservé à l'administrateur."
-        });
-
-    }
-
-    next();
-}
-
-
-/* Tous les biens masqués */
 
 router.get(
     "/properties/hidden",
     authenticateToken,
-    adminOnly,
+    requireRole("admin"),
     getAllHiddenProperties
 );
 
 
-/* Admin masque */
+/* =========================================================
+   ADMIN MASQUE
+========================================================= */
 
 router.patch(
     "/properties/:id/hide",
     authenticateToken,
-    adminOnly,
+    requireRole("admin"),
     adminHideProperty
 );
 
 
-/* Admin réactive */
+/* =========================================================
+   ADMIN RESTAURE
+========================================================= */
 
 router.patch(
     "/properties/:id/restore",
     authenticateToken,
-    adminOnly,
+    requireRole("admin"),
     adminRestoreProperty
 );
 

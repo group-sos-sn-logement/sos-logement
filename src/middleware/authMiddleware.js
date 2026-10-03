@@ -3,6 +3,67 @@ const pool = require("../config/database");
 
 
 /* =========================================================
+   LOG TENTATIVE D'ACCÈS NON AUTORISÉE
+========================================================= */
+
+async function logSecurityEvent(req, type, message) {
+
+    try {
+
+        const ip =
+            req.headers["x-forwarded-for"]?.split(",")[0]?.trim()
+            || req.socket.remoteAddress
+            || "unknown";
+
+        const userAgent =
+            req.headers["user-agent"]
+            || "unknown";
+
+        await pool.query(
+            `
+            INSERT INTO security_events (
+                event_type,
+                message,
+                user_id,
+                ip_address,
+                user_agent,
+                method,
+                path
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `,
+            [
+                type,
+                message,
+                req.user?.id || null,
+                ip,
+                userAgent,
+                req.method,
+                req.originalUrl
+            ]
+        );
+
+        console.warn(
+            "🚨 SECURITY EVENT:",
+            type,
+            message,
+            "IP:",
+            ip,
+            "PATH:",
+            req.originalUrl
+        );
+
+    } catch (error) {
+
+        console.error(
+            "SECURITY LOG ERROR:",
+            error
+        );
+
+    }
+}
+
+/* =========================================================
    VERIFY TOKEN
 ========================================================= */
 
@@ -14,12 +75,21 @@ const authenticateToken = async (req, res, next) => {
             req.headers.authorization;
 
 
+        /* TOKEN ABSENT */
+
         if (
             !authHeader ||
             !authHeader.startsWith("Bearer ")
         ) {
 
+            await logSecurityEvent(
+                req,
+                "NO_TOKEN",
+                "Tentative d'accès sans authentification"
+            );
+
             return res.status(401).json({
+                success: false,
                 message: "Authentification requise"
             });
 
@@ -30,12 +100,35 @@ const authenticateToken = async (req, res, next) => {
             authHeader.split(" ")[1];
 
 
-        const decoded =
-            jwt.verify(
-                token,
-                process.env.JWT_SECRET
+        /* TOKEN INVALIDE */
+
+        let decoded;
+
+        try {
+
+            decoded =
+                jwt.verify(
+                    token,
+                    process.env.JWT_SECRET
+                );
+
+        } catch (error) {
+
+            await logSecurityEvent(
+                req,
+                "INVALID_TOKEN",
+                "Token invalide ou expiré"
             );
 
+            return res.status(401).json({
+                success: false,
+                message: "Token invalide ou expiré"
+            });
+
+        }
+
+
+        /* UTILISATEUR */
 
         const result =
             await pool.query(
@@ -53,7 +146,14 @@ const authenticateToken = async (req, res, next) => {
 
         if (result.rows.length === 0) {
 
+            await logSecurityEvent(
+                req,
+                "UNKNOWN_USER",
+                "Token associé à un utilisateur inexistant"
+            );
+
             return res.status(401).json({
+                success: false,
                 message: "Utilisateur introuvable"
             });
 
@@ -64,9 +164,18 @@ const authenticateToken = async (req, res, next) => {
             result.rows[0];
 
 
+        /* COMPTE DÉSACTIVÉ */
+
         if (!user.is_active) {
 
+            await logSecurityEvent(
+                req,
+                "DISABLED_ACCOUNT",
+                `Compte désactivé: ${user.id}`
+            );
+
             return res.status(403).json({
+                success: false,
                 message: "Compte désactivé"
             });
 
@@ -85,9 +194,9 @@ const authenticateToken = async (req, res, next) => {
             error
         );
 
-
-        return res.status(401).json({
-            message: "Token invalide ou expiré"
+        return res.status(500).json({
+            success: false,
+            message: "Erreur d'authentification"
         });
 
     }
@@ -101,11 +210,18 @@ const authenticateToken = async (req, res, next) => {
 
 const requireRole = (...allowedRoles) => {
 
-    return (req, res, next) => {
+    return async (req, res, next) => {
 
         if (!req.user) {
 
+            await logSecurityEvent(
+                req,
+                "NO_USER",
+                "Accès sans utilisateur authentifié"
+            );
+
             return res.status(401).json({
+                success: false,
                 message: "Authentification requise"
             });
 
@@ -118,7 +234,14 @@ const requireRole = (...allowedRoles) => {
             )
         ) {
 
+            await logSecurityEvent(
+                req,
+                "FORBIDDEN_ROLE",
+                `Utilisateur ${req.user.id} (${req.user.role}) a tenté un accès réservé à: ${allowedRoles.join(", ")}`
+            );
+
             return res.status(403).json({
+                success: false,
                 message: "Accès refusé"
             });
 

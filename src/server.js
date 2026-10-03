@@ -29,6 +29,8 @@ const messageRoutes =
 const adminPropertyRoutes =
     require("./routes/adminPropertyRoutes");
 
+const securityRoutes =
+    require("./routes/securityRoutes");
 
 
 
@@ -66,6 +68,19 @@ app.use(
     "/api/admin",
     adminPropertyRoutes
 );
+
+app.use(
+    "/api/admin/security",
+    securityRoutes
+);
+
+
+
+
+
+
+
+
 
 
 
