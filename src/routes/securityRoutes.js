@@ -3,13 +3,13 @@ const express = require("express");
 const router = express.Router();
 
 const {
+    getSecurityEvents
+} = require("../controllers/securityController");
+
+const {
     authenticateToken,
     requireRole
 } = require("../middleware/authMiddleware");
-
-const {
-    getSecurityEvents
-} = require("../controllers/securityController");
 
 
 router.get(

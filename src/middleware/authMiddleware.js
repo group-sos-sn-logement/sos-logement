@@ -1,6 +1,45 @@
 const jwt = require("jsonwebtoken");
 const pool = require("../config/database");
 
+const securityAttempts = new Map();
+
+const SECURITY_WINDOW = 10 * 60 * 1000; // 10 minutes
+const SECURITY_MAX_ATTEMPTS = 10;
+
+function isSecurityBlocked(ip) {
+
+    const now = Date.now();
+
+    const data = securityAttempts.get(ip);
+
+    if (!data) {
+        securityAttempts.set(ip, {
+            count: 1,
+            firstAttempt: now
+        });
+
+        return false;
+    }
+
+    if (now - data.firstAttempt > SECURITY_WINDOW) {
+
+        securityAttempts.set(ip, {
+            count: 1,
+            firstAttempt: now
+        });
+
+        return false;
+    }
+
+    data.count++;
+
+    if (data.count > SECURITY_MAX_ATTEMPTS) {
+        return true;
+    }
+
+    return false;
+}
+
 
 /* =========================================================
    LOG TENTATIVE D'ACCÈS NON AUTORISÉE
@@ -114,15 +153,40 @@ const authenticateToken = async (req, res, next) => {
 
         } catch (error) {
 
+            const ip =
+                req.headers["x-forwarded-for"]?.split(",")[0]?.trim()
+                || req.socket.remoteAddress
+                || "unknown";
+
+
+            const blocked =
+                isSecurityBlocked(ip);
+
+
             await logSecurityEvent(
                 req,
                 "INVALID_TOKEN",
-                "Token invalide ou expiré"
+                blocked
+                    ? "Trop de tentatives avec un token invalide"
+                    : "Token invalide ou expiré"
             );
+
+
+            if (blocked) {
+
+                return res.status(429).json({
+                    success: false,
+                    message:
+                        "Trop de tentatives. Veuillez patienter."
+                });
+
+            }
+
 
             return res.status(401).json({
                 success: false,
-                message: "Token invalide ou expiré"
+                message:
+                    "Token invalide ou expiré"
             });
 
         }
