@@ -32,6 +32,9 @@ const adminPropertyRoutes =
 const securityRoutes =
     require("./routes/securityRoutes");
 
+const favoritesRoutes =
+    require("./routes/favoritesRoutes");
+
 
 
 
@@ -103,7 +106,10 @@ app.use(
 );
 
 
-
+app.use(
+    "/api/favorites",
+    favoritesRoutes
+);
 
 
 
