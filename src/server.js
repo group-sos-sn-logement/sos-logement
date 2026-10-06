@@ -42,8 +42,7 @@ const allowedOrigins = [
     "https://soslogement.sn",
     "https://www.soslogement.sn",
     "https://sos-logement.netlify.app",
-    "http://localhost:5500",
-    "http://127.0.0.1:5500"
+    "http://127.0.0.1:5501"
 ];
 
 
