@@ -35,7 +35,8 @@ const securityRoutes =
 const favoritesRoutes =
     require("./routes/favoritesRoutes");
 
-
+const studentReservationRoutes =
+    require("./routes/studentReservationRoutes");
 
 
 
@@ -111,7 +112,10 @@ app.use(
     favoritesRoutes
 );
 
-
+app.use(
+    "/api/student-reservations",
+    studentReservationRoutes
+);
 
 
 
