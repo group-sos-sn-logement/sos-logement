@@ -1,43 +1,45 @@
 const express = require("express");
-
 const router = express.Router();
 
 const {
-authenticateToken
+    authenticateToken,
+    requireRole
 } = require("../middleware/authMiddleware");
 
 const {
-createStudentReservation,
-getStudentBookingState,
-getStudentOffers
+    createStudentReservation,
+    getStudentBookingState,
+    getStudentOffers,
+    getAdminStudentNotifications,
+    updateStudentNotificationRead
 } = require("../controllers/studentReservationController");
 
-/*
-GET /api/student-reservations/offers
-العروض الطلابية التي بدأ الحجز عليها
-*/
-router.get(
-"/offers",
-getStudentOffers
-);
+// العروض الطلابية التي بدأ الحجز عليها
+router.get("/offers", getStudentOffers);
 
-/*
-GET /api/student-reservations/:propertyCode/state
-حالة المقاعد والجنس المسموح
-*/
-router.get(
-"/:propertyCode/state",
-getStudentBookingState
-);
+// حالة المقاعد والجنس المسموح
+router.get("/:propertyCode/state", getStudentBookingState);
 
-/*
-POST /api/student-reservations
-إنشاء حجز جديد
-*/
+// إنشاء حجز
 router.post(
-"/",
-authenticateToken,
-createStudentReservation
+    "/",
+    authenticateToken,
+    createStudentReservation
+);
+
+// إشعارات الإدارة
+router.get(
+    "/admin/notifications",
+    authenticateToken,
+    requireRole("admin"),
+    getAdminStudentNotifications
+);
+
+router.patch(
+    "/admin/notifications/:id/read",
+    authenticateToken,
+    requireRole("admin"),
+    updateStudentNotificationRead
 );
 
 module.exports = router;
