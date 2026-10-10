@@ -38,7 +38,7 @@ const favoritesRoutes =
 const studentReservationRoutes =
     require("./routes/studentReservationRoutes");
 
-
+const newsRoutes = require("./routes/newsRoutes");
 
 
 app.use(helmet());
@@ -116,6 +116,8 @@ app.use(
     "/api/student-reservations",
     studentReservationRoutes
 );
+
+app.use("/api/news", newsRoutes);
 
 
 
