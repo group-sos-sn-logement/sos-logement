@@ -365,6 +365,44 @@ async function createStudentReservation(req, res) {
             );
         }
 
+        // Empêche un même étudiant de réserver deux fois le même logement,
+        // même avec un autre compte ou en réservant pour une autre personne.
+        const normalizedPhone = String(phone)
+            .replace(/\D/g, "")
+            .slice(-9);
+
+        if (normalizedPhone.length !== 9) {
+            await client.query("ROLLBACK");
+            transactionStarted = false;
+
+            return sendError(
+                res,
+                400,
+                "Veuillez saisir un numéro de téléphone valide."
+            );
+        }
+
+        const duplicateReservation = await client.query(
+            `SELECT id
+            FROM student_reservations
+            WHERE property_code = $1
+            AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 9) = $2
+            AND status = 'confirmed'
+            LIMIT 1`,
+            [propertyCode, normalizedPhone]
+        );
+
+        if (duplicateReservation.rows.length > 0) {
+            await client.query("ROLLBACK");
+            transactionStarted = false;
+
+            return sendError(
+                res,
+                409,
+                "Cet étudiant a déjà une réservation confirmée pour ce logement. Vous pouvez réserver un autre logement."
+            );
+        }
+
         // Initialise l'état sans écraser les réservations existantes.
         await client.query(
             `INSERT INTO student_booking_states (
