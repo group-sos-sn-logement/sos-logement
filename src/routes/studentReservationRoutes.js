@@ -11,7 +11,8 @@ const {
     getStudentBookingState,
     getStudentOffers,
     getAdminStudentNotifications,
-    updateStudentNotificationRead
+    updateStudentNotificationRead,
+    getAdminStudentReservations
 } = require("../controllers/studentReservationController");
 
 // العروض الطلابية التي بدأ الحجز عليها
@@ -40,6 +41,14 @@ router.patch(
     authenticateToken,
     requireRole("admin"),
     updateStudentNotificationRead
+);
+
+/* ADMIN — ALL STUDENT RESERVATIONS */
+router.get(
+    "/admin/reservations",
+    authenticateToken,
+    requireRole("admin"),
+    getAdminStudentReservations
 );
 
 module.exports = router;

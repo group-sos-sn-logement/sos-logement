@@ -681,10 +681,48 @@ async function updateStudentNotificationRead(req, res) {
     }
 }
 
+/* =====================================================
+   ADMIN — GET ALL STUDENT RESERVATIONS
+   GET /api/student-reservations/admin/reservations
+===================================================== */
+
+async function getAdminStudentReservations(req, res) {
+    try {
+        const result = await pool.query(`
+            SELECT
+                sr.*,
+                p.title AS property_title,
+                p.type AS property_type,
+                p.city AS property_city,
+                p.max_students AS property_capacity
+            FROM student_reservations sr
+            LEFT JOIN properties p
+                ON p.property_code = sr.property_code
+            ORDER BY sr.created_at DESC
+            LIMIT 1000
+        `);
+
+        return res.json({
+            success: true,
+            total: result.rows.length,
+            reservations: result.rows
+        });
+    } catch (error) {
+        console.error("GET ADMIN STUDENT RESERVATIONS:", error);
+
+        return sendError(
+            res,
+            500,
+            "Impossible de charger les réservations étudiantes."
+        );
+    }
+}
+
 module.exports = {
     createStudentReservation,
     getStudentBookingState,
     getStudentOffers,
     getAdminStudentNotifications,
-    updateStudentNotificationRead
+    updateStudentNotificationRead,
+    getAdminStudentReservations
 };
