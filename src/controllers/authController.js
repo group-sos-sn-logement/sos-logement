@@ -125,7 +125,6 @@ const register = async (req, res) => {
                 SELECT COUNT(*)::INTEGER AS count
                 FROM users
                 WHERE owner_code IS NOT NULL
-                FOR UPDATE
                 `
             );
 
