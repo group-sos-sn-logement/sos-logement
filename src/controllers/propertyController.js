@@ -36,8 +36,27 @@ async function createProperty(req, res) {
 
             commission,
             is_student,
-            max_students
+            max_students,
+            target_audience
         } = req.body;
+
+        const allowedAudiences = [
+            "diaspora",
+            "senegalese",
+            "all"
+        ];
+
+        if (!allowedAudiences.includes(target_audience)) {
+
+            await client.query("ROLLBACK");
+
+            return res.status(400).json({
+                success: false,
+                message: "Veuillez choisir le public cible."
+            });
+        }
+
+        // تابع هنا بقية الكود الأصلي ابتداءً من OWNER
 
 
         /* =================================================
@@ -115,6 +134,7 @@ async function createProperty(req, res) {
                 commission,
                 is_student,
                 max_students,
+                target_audience,
 
                 status
             )
@@ -143,6 +163,7 @@ async function createProperty(req, res) {
                 $17,
                 $18,
                 $19,
+                $20,
 
                 'pending'
             )
@@ -172,7 +193,8 @@ async function createProperty(req, res) {
 
                 commission,
                 is_student,
-                max_students
+                max_students,
+                target_audience,
             ]
         );
 
@@ -283,6 +305,7 @@ async function getApprovedProperties(req, res) {
 
                 p.is_student,
                 p.max_students,
+                p.target_audience,
 
                 p.status,
                 p.created_at,
@@ -394,6 +417,7 @@ async function getPendingProperties(req, res) {
                 p.commission,
                 p.is_student,
                 p.max_students,
+                p.target_audience,
                 p.status,
                 p.created_at,
 
