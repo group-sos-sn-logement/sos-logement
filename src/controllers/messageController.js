@@ -520,14 +520,124 @@ async function getDiasporaMessages(req, res) {
 
     }
 }
-module.exports = {
 
+
+/* =========================================================
+   REPLY VIA TWILIO WHATSAPP
+========================================================= */
+
+async function replyWhatsAppMessage(req, res) {
+    try {
+        const id = Number(req.params.id);
+        const { reply } = req.body;
+
+        if (!Number.isInteger(id) || id <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Identifiant invalide."
+            });
+        }
+
+        if (!reply || !reply.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: "La réponse est vide."
+            });
+        }
+
+        const result = await pool.query(
+            `SELECT id, source, phone
+             FROM messages
+             WHERE id = $1`,
+            [id]
+        );
+
+        if (!result.rows.length) {
+            return res.status(404).json({
+                success: false,
+                message: "Message introuvable."
+            });
+        }
+
+        const message = result.rows[0];
+
+        if (message.source !== "whatsapp") {
+            return res.status(400).json({
+                success: false,
+                message: "Ce message ne provient pas de WhatsApp."
+            });
+        }
+
+        if (!message.phone) {
+            return res.status(400).json({
+                success: false,
+                message: "Numéro WhatsApp introuvable."
+            });
+        }
+
+        const accountSid = process.env.TWILIO_ACCOUNT_SID;
+        const authToken = process.env.TWILIO_AUTH_TOKEN;
+        const whatsappFrom = process.env.TWILIO_WHATSAPP_FROM;
+
+        if (!accountSid || !authToken || !whatsappFrom) {
+            return res.status(500).json({
+                success: false,
+                message: "Configuration Twilio incomplète."
+            });
+        }
+
+        const twilio = require("twilio");
+        const client = twilio(accountSid, authToken);
+
+        const to = message.phone.startsWith("whatsapp:")
+            ? message.phone
+            : `whatsapp:${message.phone}`;
+
+        const from = whatsappFrom.startsWith("whatsapp:")
+            ? whatsappFrom
+            : `whatsapp:${whatsappFrom}`;
+
+        const sent = await client.messages.create({
+            from,
+            to,
+            body: reply.trim()
+        });
+
+        const updated = await pool.query(
+            `UPDATE messages
+             SET admin_reply = $1,
+                 status = 'replied',
+                 replied_at = NOW(),
+                 updated_at = NOW()
+             WHERE id = $2
+             RETURNING *`,
+            [reply.trim(), id]
+        );
+
+        return res.json({
+            success: true,
+            message: "Réponse WhatsApp envoyée.",
+            sid: sent.sid,
+            data: updated.rows[0]
+        });
+
+    } catch (error) {
+        console.error("REPLY WHATSAPP ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Échec de l'envoi WhatsApp."
+        });
+    }
+}
+
+module.exports = {
     createMessage,
     getMessages,
     getMessage,
     getDiasporaMessages,
     updateMessageStatus,
     replyMessage,
+    replyWhatsAppMessage,
     deleteMessage
-
 };
