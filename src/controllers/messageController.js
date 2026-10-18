@@ -603,6 +603,16 @@ async function replyWhatsAppMessage(req, res) {
             body: reply.trim()
         });
 
+        await pool.query(
+            `INSERT INTO message_replies
+                (message_id, sender, channel, body, external_id, status)
+            VALUES ($1, 'admin', 'whatsapp', $2, $3, 'sent')
+            ON CONFLICT (channel, external_id)
+            WHERE external_id IS NOT NULL
+            DO NOTHING`,
+            [id, reply.trim(), sent.sid]
+        );
+
         const updated = await pool.query(
             `UPDATE messages
              SET admin_reply = $1,
