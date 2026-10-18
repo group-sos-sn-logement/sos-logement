@@ -15,6 +15,7 @@ const {
     updateMessageStatus,
     replyMessage,
     replyWhatsAppMessage,
+    getMessageConversation,
     deleteMessage
 } = require("../controllers/messageController");
 
@@ -104,6 +105,13 @@ router.patch(
     authenticateToken,
     requireRole("admin"),
     replyWhatsAppMessage
+);
+
+router.get(
+    "/admin/:id/conversation",
+    authenticateToken,
+    requireRole("admin"),
+    getMessageConversation
 );
 
 module.exports = router;

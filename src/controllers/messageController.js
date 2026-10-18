@@ -631,6 +631,47 @@ async function replyWhatsAppMessage(req, res) {
     }
 }
 
+
+/* =========================================================
+   GET CONVERSATION HISTORY
+========================================================= */
+
+async function getMessageConversation(req, res) {
+    try {
+        const messageId = Number(req.params.id);
+
+        if (!Number.isInteger(messageId) || messageId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Identifiant invalide."
+            });
+        }
+
+        const result = await pool.query(
+            `SELECT id, message_id, sender, channel,
+                    body, external_id, status, created_at
+             FROM message_replies
+             WHERE message_id = $1
+             ORDER BY created_at ASC, id ASC`,
+            [messageId]
+        );
+
+        return res.json({
+            success: true,
+            messages: result.rows
+        });
+
+    } catch (error) {
+        console.error("GET CONVERSATION ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors du chargement de la conversation."
+        });
+    }
+}
+
+
 module.exports = {
     createMessage,
     getMessages,
@@ -639,5 +680,6 @@ module.exports = {
     updateMessageStatus,
     replyMessage,
     replyWhatsAppMessage,
+    getMessageConversation,
     deleteMessage
 };
