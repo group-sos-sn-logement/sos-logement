@@ -14,8 +14,6 @@ const {
     getDiasporaMessages,
     updateMessageStatus,
     replyMessage,
-    replyWhatsAppMessage,
-    getMessageConversation,
     deleteMessage
 } = require("../controllers/messageController");
 
@@ -100,18 +98,5 @@ router.get(
     getDiasporaMessages
 );
 
-router.patch(
-    "/admin/:id/reply-whatsapp",
-    authenticateToken,
-    requireRole("admin"),
-    replyWhatsAppMessage
-);
-
-router.get(
-    "/admin/:id/conversation",
-    authenticateToken,
-    requireRole("admin"),
-    getMessageConversation
-);
 
 module.exports = router;
