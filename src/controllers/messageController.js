@@ -561,13 +561,6 @@ async function replyWhatsAppMessage(req, res) {
 
         const message = result.rows[0];
 
-        if (message.source !== "whatsapp") {
-            return res.status(400).json({
-                success: false,
-                message: "Ce message ne provient pas de WhatsApp."
-            });
-        }
-
         if (!message.phone) {
             return res.status(400).json({
                 success: false,
