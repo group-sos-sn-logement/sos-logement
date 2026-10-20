@@ -40,7 +40,6 @@ const studentReservationRoutes =
 
 const newsRoutes = require("./routes/newsRoutes");
 
-const twilioRoutes = require("./routes/twilioRoutes");
 
 
 
@@ -127,7 +126,6 @@ app.use(
 
 app.use("/api/news", newsRoutes);
 
-app.use("/api/twilio", twilioRoutes);
 
 
 
