@@ -1,6 +1,10 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const pool = require("../config/database");
+const {
+    logSecurityEvent
+} = require("../middleware/securityLogger");
+
 
 const {
     numberToLetters,
@@ -269,11 +273,16 @@ const login = async (req, res) => {
 
         if (result.rows.length === 0) {
 
+            await logSecurityEvent(
+                req,
+                "LOGIN_FAILED_UNKNOWN_PHONE",
+                "Échec de connexion : numéro non associé à un compte."
+            );
+
             return res.status(401).json({
                 message:
                     "Numéro de téléphone ou mot de passe incorrect"
             });
-
         }
 
 
@@ -281,6 +290,13 @@ const login = async (req, res) => {
 
 
         if (!user.is_active) {
+
+            await logSecurityEvent(
+                req,
+                "LOGIN_DISABLED_ACCOUNT",
+                "Tentative de connexion à un compte désactivé.",
+                { userId: user.id }
+            );
 
             return res.status(403).json({
                 message:
@@ -299,12 +315,26 @@ const login = async (req, res) => {
 
         if (!passwordValid) {
 
+            await logSecurityEvent(
+                req,
+                "LOGIN_FAILED_PASSWORD",
+                "Mot de passe incorrect.",
+                { userId: user.id }
+            );
+
             return res.status(401).json({
                 message:
                     "Numéro de téléphone ou mot de passe incorrect"
             });
 
         }
+
+        await logSecurityEvent(
+            req,
+            "LOGIN_SUCCESS",
+            "Connexion réussie.",
+            { userId: user.id }
+        );
 
 
         const token = jwt.sign(
@@ -415,6 +445,12 @@ const adminLogin = async (req, res) => {
 
         if (result.rows.length === 0) {
 
+            await logSecurityEvent(
+                req,
+                "ADMIN_LOGIN_FAILED",
+                "Identifiants administrateur incorrects."
+            );
+
             return res.status(401).json({
                 message:
                     "Identifiants administrateur incorrects"
@@ -431,6 +467,13 @@ const adminLogin = async (req, res) => {
         ----------------------------------------- */
 
         if (!admin.is_active) {
+
+            await logSecurityEvent(
+                req,
+                "ADMIN_LOGIN_DISABLED",
+                "Tentative de connexion à un compte administrateur désactivé.",
+                { userId: admin.id }
+            );
 
             return res.status(403).json({
                 message:
@@ -453,6 +496,13 @@ const adminLogin = async (req, res) => {
 
         if (!passwordValid) {
 
+            await logSecurityEvent(
+                req,
+                "ADMIN_LOGIN_FAILED",
+                "Mot de passe administrateur incorrect.",
+                { userId: admin.id }
+            );
+
             return res.status(401).json({
                 message:
                     "Identifiants administrateur incorrects"
@@ -461,6 +511,13 @@ const adminLogin = async (req, res) => {
         }
 
 
+
+        await logSecurityEvent(
+            req,
+            "ADMIN_LOGIN_SUCCESS",
+            "Connexion administrateur réussie.",
+            { userId: admin.id }
+        );
         /* -----------------------------------------
            JWT ADMIN
         ----------------------------------------- */

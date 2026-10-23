@@ -5,6 +5,10 @@ const securityAttempts = new Map();
 
 const SECURITY_WINDOW = 10 * 60 * 1000; // 10 minutes
 const SECURITY_MAX_ATTEMPTS = 10;
+const {
+    logSecurityEvent
+} = require("./securityLogger");
+
 
 function isSecurityBlocked(ip) {
 
@@ -38,68 +42,6 @@ function isSecurityBlocked(ip) {
     }
 
     return false;
-}
-
-
-/* =========================================================
-   LOG TENTATIVE D'ACCÈS NON AUTORISÉE
-========================================================= */
-
-async function logSecurityEvent(req, type, message) {
-
-    try {
-
-        const ip =
-            req.headers["x-forwarded-for"]?.split(",")[0]?.trim()
-            || req.socket.remoteAddress
-            || "unknown";
-
-        const userAgent =
-            req.headers["user-agent"]
-            || "unknown";
-
-        await pool.query(
-            `
-            INSERT INTO security_events (
-                event_type,
-                message,
-                user_id,
-                ip_address,
-                user_agent,
-                method,
-                path
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            `,
-            [
-                type,
-                message,
-                req.user?.id || null,
-                ip,
-                userAgent,
-                req.method,
-                req.originalUrl
-            ]
-        );
-
-        console.warn(
-            "🚨 SECURITY EVENT:",
-            type,
-            message,
-            "IP:",
-            ip,
-            "PATH:",
-            req.originalUrl
-        );
-
-    } catch (error) {
-
-        console.error(
-            "SECURITY LOG ERROR:",
-            error
-        );
-
-    }
 }
 
 /* =========================================================
@@ -153,10 +95,7 @@ const authenticateToken = async (req, res, next) => {
 
         } catch (error) {
 
-            const ip =
-                req.headers["x-forwarded-for"]?.split(",")[0]?.trim()
-                || req.socket.remoteAddress
-                || "unknown";
+            const ip = req.ip || req.socket.remoteAddress || "unknown";
 
 
             const blocked =
@@ -213,7 +152,8 @@ const authenticateToken = async (req, res, next) => {
             await logSecurityEvent(
                 req,
                 "UNKNOWN_USER",
-                "Token associé à un utilisateur inexistant"
+                "Token associé à un utilisateur inexistant",
+                { userId: decoded.id }
             );
 
             return res.status(401).json({
@@ -235,7 +175,8 @@ const authenticateToken = async (req, res, next) => {
             await logSecurityEvent(
                 req,
                 "DISABLED_ACCOUNT",
-                `Compte désactivé: ${user.id}`
+                `Compte désactivé: ${user.id}`,
+                { userId: user.id }
             );
 
             return res.status(403).json({
@@ -301,8 +242,10 @@ const requireRole = (...allowedRoles) => {
             await logSecurityEvent(
                 req,
                 "FORBIDDEN_ROLE",
-                `Utilisateur ${req.user.id} (${req.user.role}) a tenté un accès réservé à: ${allowedRoles.join(", ")}`
+                `Utilisateur ${req.user.id} (${req.user.role}) a tenté un accès réservé à: ${allowedRoles.join(", ")}`,
+                { userId: req.user.id }
             );
+
 
             return res.status(403).json({
                 success: false,

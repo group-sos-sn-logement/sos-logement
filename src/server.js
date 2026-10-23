@@ -7,6 +7,8 @@ const helmet = require("helmet");
 const pool = require("./config/database");
 
 const app = express();
+// Render : application derrière un proxy
+app.set("trust proxy", 1);
 
 const authRoutes = require("./routes/authRoutes");
 
@@ -163,6 +165,45 @@ app.get("/api/health", async (req, res) => {
             database: "disconnected"
         });
     }
+});
+
+/* =========================================================
+   SECURITY MONITORING — API
+========================================================= */
+
+const {
+    logSecurityEvent
+} = require("./middleware/securityLogger");
+
+// Routes API inexistantes : scans et chemins suspects
+app.use(async (req, res, next) => {
+    if (req.path.startsWith("/api/")) {
+        await logSecurityEvent(
+            req,
+            "API_ROUTE_NOT_FOUND",
+            "Requête vers une route API inexistante."
+        );
+    }
+
+    next();
+});
+
+// Erreurs Express non traitées
+app.use(async (error, req, res, next) => {
+    await logSecurityEvent(
+        req,
+        "BACKEND_ERROR",
+        `Erreur Express : ${error.message || "Erreur inconnue"}`
+    );
+
+    if (res.headersSent) {
+        return next(error);
+    }
+
+    return res.status(500).json({
+        success: false,
+        message: "Erreur serveur"
+    });
 });
 
 const PORT = process.env.PORT || 5000;
