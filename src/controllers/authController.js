@@ -4,7 +4,7 @@ const pool = require("../config/database");
 const {
     logSecurityEvent
 } = require("../middleware/securityLogger");
-
+const { normalizePhone } = require("../utils/phoneUtils");
 
 const {
     numberToLetters,
@@ -24,9 +24,19 @@ const register = async (req, res) => {
         const {
             name,
             phone,
+            country,
             password,
             role
         } = req.body;
+
+        const normalizedPhone = normalizePhone(phone, country);
+
+        if (!normalizedPhone) {
+            return res.status(400).json({
+                success: false,
+                message: "Numéro de téléphone invalide pour le pays sélectionné."
+            });
+        }
 
         if (!name || !phone || !password || !role) {
             return res.status(400).json({
@@ -46,7 +56,7 @@ const register = async (req, res) => {
             FROM users
             WHERE phone = $1
             `,
-            [phone]
+            [normalizedPhone]
         );
 
         if (existingUser.rows.length > 0) {
@@ -86,7 +96,7 @@ const register = async (req, res) => {
                 `,
                 [
                     name,
-                    phone,
+                    normalizedPhone,
                     passwordHash,
                     role
                 ]
@@ -175,7 +185,7 @@ const register = async (req, res) => {
                 `,
                 [
                     name,
-                    phone,
+                    normalizedPhone,
                     passwordHash,
                     ownerCode,
                     ownerRef
@@ -219,12 +229,19 @@ const register = async (req, res) => {
 
     } catch (error) {
 
-        console.error(
-            "REGISTER ERROR:",
-            error
-        );
+        console.error("REGISTER ERROR:", error);
+
+        // Numéro déjà utilisé
+        if (error.code === "23505") {
+            return res.status(409).json({
+                success: false,
+                message: "Ce numéro de téléphone existe déjà.",
+                userExists: true
+            });
+        }
 
         return res.status(500).json({
+            success: false,
             message: "Erreur serveur"
         });
     }
