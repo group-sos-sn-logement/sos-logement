@@ -13,7 +13,8 @@ const {
     getPendingProperties,
     approveProperty,
     rejectProperty,
-    getPropertyByCode
+    getPropertyByCode,
+    getPropertyTypes
 } = require("../controllers/propertyController");
 
 const {
@@ -109,6 +110,12 @@ router.post(
     requireRole("owner"),
     addPropertyImages
 );
+
+router.get(
+    "/types",
+    getPropertyTypes
+);
+
 
 // =====================================================
 // ADMIN — PENDING PROPERTIES

@@ -19,11 +19,15 @@ async function createProperty(req, res) {
         const {
             title,
             type,
+            custom_type,
+            is_custom_type,
+
             description,
             city,
             exact_location,
 
             price_type,
+            price_sale,
             price_month,
             price_week,
             price_day,
@@ -46,7 +50,31 @@ async function createProperty(req, res) {
             "all"
         ];
 
-        if (!allowedAudiences.includes(target_audience)) {
+        const isForSale = price_type === "sale";
+
+        const finalType = String(
+            is_custom_type ? custom_type : type || ""
+        ).trim();
+
+        if (!finalType) {
+            await client.query("ROLLBACK");
+
+            return res.status(400).json({
+                success: false,
+                message: "Veuillez choisir un type de propriété."
+            });
+        }
+
+        if (isForSale && (!Number.isFinite(Number(price_sale)) || Number(price_sale) <= 0)) {
+            await client.query("ROLLBACK");
+
+            return res.status(400).json({
+                success: false,
+                message: "Veuillez saisir un prix de vente valide."
+            });
+        }
+
+        if (!isForSale && !allowedAudiences.includes(target_audience)) {
 
             await client.query("ROLLBACK");
 
@@ -56,8 +84,18 @@ async function createProperty(req, res) {
             });
         }
 
-        // تابع هنا بقية الكود الأصلي ابتداءً من OWNER
+        if (is_custom_type && custom_type) {
 
+            await client.query(
+                `
+                INSERT INTO property_types (name)
+                VALUES ($1)
+                ON CONFLICT (LOWER(name)) DO NOTHING
+                `,
+                [finalType]
+            );
+
+        }
 
         /* =================================================
            OWNER
@@ -116,11 +154,15 @@ async function createProperty(req, res) {
 
                 title,
                 type,
+                custom_type,
+                is_custom_type,
+
                 description,
                 city,
                 exact_location,
 
                 price_type,
+                price_sale,
                 price_month,
                 price_week,
                 price_day,
@@ -147,23 +189,27 @@ async function createProperty(req, res) {
                 $4,
                 $5,
                 $6,
-                $7,
 
+                $7,
                 $8,
                 $9,
+
                 $10,
                 $11,
-
                 $12,
                 $13,
                 $14,
+
                 $15,
                 $16,
-
                 $17,
                 $18,
                 $19,
+
                 $20,
+                $21,
+                $22,
+                $23,
 
                 'pending'
             )
@@ -174,27 +220,31 @@ async function createProperty(req, res) {
                 req.user.id,
                 propertyReference,
 
-                title,
-                type,
+                finalType,
+                finalType,
+                is_custom_type ? finalType : null,
+                Boolean(is_custom_type),
+
                 description,
                 city,
                 exact_location,
 
                 price_type,
-                price_month,
-                price_week,
-                price_day,
+                isForSale ? Number(price_sale) : 0,
+                isForSale ? 0 : Number(price_month || 0),
+                isForSale ? 0 : Number(price_week || 0),
+                isForSale ? 0 : Number(price_day || 0),
 
-                chambres,
-                cuisine,
-                sdb,
-                salon,
-                surface,
+                isForSale ? 0 : Number(chambres || 0),
+                isForSale ? 0 : Number(cuisine || 0),
+                isForSale ? 0 : Number(sdb || 0),
+                isForSale ? 0 : Number(salon || 0),
+                Number(surface || 0),
 
-                commission,
-                is_student,
-                max_students,
-                target_audience,
+                Number(commission || 0),
+                isForSale ? false : Boolean(is_student),
+                isForSale ? 0 : Number(max_students || 0),
+                isForSale ? "all" : target_audience
             ]
         );
 
@@ -294,6 +344,10 @@ async function getApprovedProperties(req, res) {
                 p.price_month,
                 p.price_week,
                 p.price_day,
+
+                p.price_sale,
+                p.custom_type,
+                p.is_custom_type,
 
                 p.chambres,
                 p.cuisine,
@@ -409,6 +463,9 @@ async function getPendingProperties(req, res) {
                 p.price_month,
                 p.price_week,
                 p.price_day,
+                p.price_sale,
+                p.custom_type,
+                p.is_custom_type,
                 p.chambres,
                 p.cuisine,
                 p.sdb,
@@ -661,6 +718,35 @@ const getPropertyByCode = async (req, res) => {
 
 };
 
+async function getPropertyTypes(req, res) {
+
+    try {
+
+        const result = await pool.query(
+            `
+            SELECT id, name
+            FROM property_types
+            ORDER BY name ASC
+            `
+        );
+
+        return res.json({
+            success: true,
+            types: result.rows
+        });
+
+    } catch (error) {
+
+        console.error("GET PROPERTY TYPES:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors du chargement des types."
+        });
+
+    }
+}
+
 module.exports = {
 
     createProperty,
@@ -668,6 +754,7 @@ module.exports = {
     getPendingProperties,
     approveProperty,
     rejectProperty,
-    getPropertyByCode
+    getPropertyByCode,
+    getPropertyTypes
 
 };
