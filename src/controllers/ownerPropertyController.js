@@ -130,17 +130,17 @@ async function getMyProperty(req, res) {
 }
 
 
+
+
 /* =====================================================
-   UPDATE PROPERTY
+   UPDATE PROPERTY — OWNER
 ===================================================== */
 
 async function updateMyProperty(req, res) {
-
     try {
-
         const propertyId = Number(req.params.id);
 
-        if (!propertyId) {
+        if (!Number.isInteger(propertyId) || propertyId <= 0) {
             return res.status(400).json({
                 success: false,
                 message: "ID de propriété invalide"
@@ -150,143 +150,262 @@ async function updateMyProperty(req, res) {
         const {
             title,
             type,
+            custom_type,
+            is_custom_type,
             description,
             city,
             exact_location,
-            price,
+            price_type,
+            price_sale,
             price_month,
             price_week,
             price_day,
-            price_type,
             chambres,
             cuisine,
             sdb,
             salon,
             surface,
+            commission,
             is_student,
-            max_students
+            max_students,
+            target_audience
         } = req.body;
 
+        // Convertir proprement les booléens
+        const isCustomType =
+            is_custom_type === true || is_custom_type === "true";
+
+        const requestedStudent =
+            is_student === true || is_student === "true";
+
+        // Vérifier le type de tarification
+        const allowedPriceTypes = [
+            "sale",
+            "monthly",
+            "weekly",
+            "daily"
+        ];
+
+        if (!allowedPriceTypes.includes(price_type)) {
+            return res.status(400).json({
+                success: false,
+                message: "Type de tarification invalide."
+            });
+        }
+
+        // Vérifier le titre
+        const finalTitle = String(title || "").trim();
+
+        if (!finalTitle) {
+            return res.status(400).json({
+                success: false,
+                message: "Le titre est obligatoire."
+            });
+        }
+
+        // Vérifier le type immobilier
+        const finalType = String(
+            isCustomType ? custom_type || "" : type || ""
+        ).trim();
+
+        if (!finalType) {
+            return res.status(400).json({
+                success: false,
+                message: "Le type de propriété est obligatoire."
+            });
+        }
+
+        // Vérifier les champs numériques
+        const numericFields = {
+            price_sale,
+            price_month,
+            price_week,
+            price_day,
+            chambres,
+            cuisine,
+            sdb,
+            salon,
+            surface,
+            commission,
+            max_students
+        };
+
+        for (const [field, value] of Object.entries(numericFields)) {
+            if (
+                value !== undefined &&
+                value !== null &&
+                value !== "" &&
+                (!Number.isFinite(Number(value)) || Number(value) < 0)
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Valeur invalide pour ${field}.`
+                });
+            }
+        }
+
+        const isSale = price_type === "sale";
+        const salePrice = Number(price_sale) || 0;
+
+        if (isSale && salePrice <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Veuillez saisir un prix de vente valide."
+            });
+        }
+
+        // La base accepte uniquement ces trois valeurs
+        const allowedAudiences = [
+            "diaspora",
+            "senegalese",
+            "all"
+        ];
+
+        const finalTargetAudience = isSale
+            ? "all"
+            : String(target_audience || "all").trim().toLowerCase();
+
+        if (!allowedAudiences.includes(finalTargetAudience)) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Public cible invalide. Valeurs autorisées : diaspora, senegalese, all."
+            });
+        }
+
+        const finalIsStudent = isSale ? false : requestedStudent;
+
+                
+        const ownershipCheck = await pool.query(
+            `
+            SELECT id
+            FROM properties
+            WHERE id = $1
+            AND owner_id = $2
+            `,
+            [propertyId, req.user.id]
+        );
+
+        if (!ownershipCheck.rows.length) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Bien introuvable ou vous n'êtes pas son propriétaire."
+            });
+        }
+
+
+        // Enregistrer le type personnalisé s'il n'existe pas déjà
+        // Cette requête ne nécessite pas de contrainte ON CONFLICT.
+        if (isCustomType) {
+            await pool.query(
+                `
+                INSERT INTO property_types (name)
+                SELECT $1
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM property_types
+                    WHERE LOWER(name) = LOWER($1)
+                )
+                `,
+                [finalType]
+            );
+        }
 
         const result = await pool.query(
             `
             UPDATE properties
-
             SET
-                title = COALESCE($1, title),
-                type = COALESCE($2, type),
-                description = COALESCE($3, description),
-                city = COALESCE($4, city),
-                exact_location = COALESCE($5, exact_location),
+                title = $1,
+                type = $2,
+                custom_type = $3,
+                is_custom_type = $4,
 
-                price_month =
-                    COALESCE(
-                        $6,
-                        price_month
-                    ),
+                description = $5,
+                city = $6,
+                exact_location = $7,
 
-                price_week =
-                    COALESCE(
-                        $7,
-                        price_week
-                    ),
+                price_type = $8,
+                price_sale = $9,
+                price_month = $10,
+                price_week = $11,
+                price_day = $12,
 
-                price_day =
-                    COALESCE(
-                        $8,
-                        price_day
-                    ),
+                chambres = $13,
+                cuisine = $14,
+                sdb = $15,
+                salon = $16,
+                surface = $17,
 
-                price_type =
-                    COALESCE(
-                        $9,
-                        price_type
-                    ),
-
-                chambres = COALESCE($10, chambres),
-                cuisine = COALESCE($11, cuisine),
-                sdb = COALESCE($12, sdb),
-                salon = COALESCE($13, salon),
-                surface = COALESCE($14, surface),
-
-                is_student =
-                    COALESCE(
-                        $15,
-                        is_student
-                    ),
-
-                max_students =
-                    COALESCE(
-                        $16,
-                        max_students
-                    ),
+                commission = $18,
+                is_student = $19,
+                max_students = $20,
+                target_audience = $21,
 
                 updated_at = NOW()
 
-            WHERE id = $17
-              AND owner_id = $18
+            WHERE id = $22
+              AND owner_id = $23
 
             RETURNING *
             `,
             [
-                title,
-                type,
-                description,
-                city,
-                exact_location,
+                finalTitle,
+                finalType,
+                isCustomType ? finalType : null,
+                isCustomType,
 
-                price_month ?? price ?? null,
-                price_week ?? null,
-                price_day ?? null,
-                price_type ?? null,
+                description || null,
+                city || null,
+                exact_location || null,
 
-                chambres,
-                cuisine,
-                sdb,
-                salon,
-                surface,
+                price_type,
+                isSale ? salePrice : 0,
+                isSale ? 0 : Number(price_month) || 0,
+                isSale ? 0 : Number(price_week) || 0,
+                isSale ? 0 : Number(price_day) || 0,
 
-                is_student,
-                max_students,
+                Number(chambres) || 0,
+                Number(cuisine) || 0,
+                Number(sdb) || 0,
+                Number(salon) || 0,
+                Number(surface) || 0,
+
+                Number(commission) || 0,
+                finalIsStudent,
+                finalIsStudent ? Number(max_students) || 0 : 0,
+                finalTargetAudience,
 
                 propertyId,
                 req.user.id
             ]
         );
 
-
         if (!result.rows.length) {
-
             return res.status(404).json({
                 success: false,
                 message:
-                    "Bien introuvable ou vous n'êtes pas son propriétaire"
+                    "Bien introuvable ou vous n'êtes pas son propriétaire."
             });
         }
 
-
         return res.json({
-
             success: true,
-
-            message:
-                "Bien modifié avec succès",
-
-            property:
-                result.rows[0]
-
+            message: "Bien modifié avec succès.",
+            property: result.rows[0]
         });
 
     } catch (error) {
-
         console.error("❌ UPDATE MY PROPERTY:", error);
 
         return res.status(500).json({
             success: false,
-            message: "Erreur lors de la modification"
+            message: "Erreur lors de la modification."
         });
     }
 }
+
+
 
 
 /* =====================================================
@@ -410,6 +529,7 @@ async function searchMyProperties(req, res) {
                 OR p.city ILIKE $2
                 OR p.type ILIKE $2
                 OR CAST(p.price_month AS TEXT) ILIKE $2
+                OR CAST(p.price_sale AS TEXT) ILIKE $2
                 OR CAST(p.price_week AS TEXT) ILIKE $2
                 OR CAST(p.price_day AS TEXT) ILIKE $2
             )
