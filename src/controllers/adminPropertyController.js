@@ -5,13 +5,12 @@ const pool = require("../config/database");
 // MODIFIER UN BIEN — ADMIN
 // =====================================================
 
+
 async function updateProperty(req, res) {
-
     try {
-
         const propertyId = Number(req.params.id);
 
-        if (!propertyId) {
+        if (!Number.isInteger(propertyId) || propertyId <= 0) {
             return res.status(400).json({
                 success: false,
                 message: "ID de propriété invalide"
@@ -38,54 +37,34 @@ async function updateProperty(req, res) {
             max_students
         } = req.body;
 
-        const result = await pool.query(
-            `
-            UPDATE properties
-            SET
-                title = COALESCE($1, title),
-                type = COALESCE($2, type),
+        const result = await pool.query(`
+            UPDATE properties SET
+                title = COALESCE(NULLIF($1, ''), title),
+                type = COALESCE(NULLIF($2, ''), type),
                 description = COALESCE($3, description),
-                city = COALESCE($4, city),
+                city = COALESCE(NULLIF($4, ''), city),
                 exact_location = COALESCE($5, exact_location),
-                price_month = COALESCE($6, price_month),
-                price_week = COALESCE($7, price_week),
-                price_day = COALESCE($8, price_day),
-                price_type = COALESCE($9, price_type),
-                chambres = COALESCE($10, chambres),
-                cuisine = COALESCE($11, cuisine),
-                sdb = COALESCE($12, sdb),
-                salon = COALESCE($13, salon),
-                surface = COALESCE($14, surface),
-                commission = COALESCE($15, commission),
-                is_student = COALESCE($16, is_student),
-                max_students = COALESCE($17, max_students),
+                price_month = COALESCE(NULLIF($6, '')::numeric, price_month),
+                price_week = COALESCE(NULLIF($7, '')::numeric, price_week),
+                price_day = COALESCE(NULLIF($8, '')::numeric, price_day),
+                price_type = COALESCE(NULLIF($9, ''), price_type),
+                chambres = COALESCE(NULLIF($10, '')::integer, chambres),
+                cuisine = COALESCE(NULLIF($11, '')::integer, cuisine),
+                sdb = COALESCE(NULLIF($12, '')::integer, sdb),
+                salon = COALESCE(NULLIF($13, '')::integer, salon),
+                surface = COALESCE(NULLIF($14, '')::numeric, surface),
+                commission = COALESCE(NULLIF($15, '')::numeric, commission),
+                is_student = COALESCE(NULLIF($16, '')::boolean, is_student),
+                max_students = COALESCE(NULLIF($17, '')::integer, max_students),
                 updated_at = NOW()
-
             WHERE id = $18
-
             RETURNING *
-            `,
-            [
-                title,
-                type,
-                description,
-                city,
-                exact_location,
-                price_month,
-                price_week,
-                price_day,
-                price_type,
-                chambres,
-                cuisine,
-                sdb,
-                salon,
-                surface,
-                commission,
-                is_student,
-                max_students,
-                propertyId
-            ]
-        );
+        `, [
+            title, type, description, city, exact_location,
+            price_month, price_week, price_day, price_type,
+            chambres, cuisine, sdb, salon, surface, commission,
+            is_student, max_students, propertyId
+        ]);
 
         if (!result.rows.length) {
             return res.status(404).json({
@@ -101,8 +80,7 @@ async function updateProperty(req, res) {
         });
 
     } catch (error) {
-
-        console.error("❌ ADMIN UPDATE PROPERTY:", error);
+        console.error("ADMIN UPDATE PROPERTY:", error);
 
         return res.status(500).json({
             success: false,
@@ -110,6 +88,7 @@ async function updateProperty(req, res) {
         });
     }
 }
+
 
 
 // =====================================================
