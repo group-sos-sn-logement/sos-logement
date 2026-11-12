@@ -90,7 +90,7 @@ async function getHiddenProperties(req, res) {
 
 
 /* =====================================================
-   RÉACTIVER UN BIEN MASQUÉ PAR SON PROPRIÉTAIRE
+   RESTORE OWNER HIDDEN PROPERTY
 ===================================================== */
 
 async function restoreProperty(req, res) {
@@ -105,7 +105,6 @@ async function restoreProperty(req, res) {
                 success: false,
                 message: "ID du bien invalide."
             });
-
         }
 
         const result = await pool.query(
@@ -114,7 +113,7 @@ async function restoreProperty(req, res) {
 
             SET
                 status = COALESCE(
-                    NULLIF(status_before_hidden, ''),
+                    NULLIF(BTRIM(status_before_hidden), ''),
                     'pending'
                 ),
 
@@ -130,17 +129,18 @@ async function restoreProperty(req, res) {
                 id = $1
                 AND owner_id = $2
                 AND status = 'hidden'
-                AND owner_hidden = TRUE
                 AND admin_hidden = FALSE
                 AND hidden_by_admin IS NULL
 
             RETURNING
                 id,
+                owner_id,
                 property_code,
                 status,
                 owner_hidden,
                 admin_hidden,
                 hidden_by_admin
+
             `,
             [
                 propertyId,
@@ -153,9 +153,8 @@ async function restoreProperty(req, res) {
             return res.status(403).json({
                 success: false,
                 message:
-                    "Ce bien ne peut pas être réactivé par le propriétaire. Vérifiez qu'il vous appartient et qu'il n'a pas été masqué par l'administration."
+                    "Ce bien ne peut pas être réactivé. Vérifiez qu'il vous appartient et qu'il n'est pas masqué par l'administration."
             });
-
         }
 
         return res.json({
@@ -177,7 +176,6 @@ async function restoreProperty(req, res) {
         });
 
     }
-
 }
 
 
