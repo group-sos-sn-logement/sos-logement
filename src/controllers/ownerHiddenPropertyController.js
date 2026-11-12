@@ -89,6 +89,10 @@ async function getHiddenProperties(req, res) {
 
 
 
+/* =====================================================
+   RÉACTIVER UN BIEN MASQUÉ PAR SON PROPRIÉTAIRE
+===================================================== */
+
 async function restoreProperty(req, res) {
 
     try {
@@ -96,10 +100,12 @@ async function restoreProperty(req, res) {
         const propertyId = Number(req.params.id);
 
         if (!Number.isInteger(propertyId) || propertyId <= 0) {
+
             return res.status(400).json({
                 success: false,
                 message: "ID du bien invalide."
             });
+
         }
 
         const result = await pool.query(
@@ -114,9 +120,9 @@ async function restoreProperty(req, res) {
 
                 owner_hidden = FALSE,
 
-                status_before_hidden = NULL,
-
                 hidden_at = NULL,
+
+                status_before_hidden = NULL,
 
                 updated_at = CURRENT_TIMESTAMP
 
@@ -125,8 +131,8 @@ async function restoreProperty(req, res) {
                 AND owner_id = $2
                 AND status = 'hidden'
                 AND owner_hidden = TRUE
-                AND COALESCE(admin_hidden::integer, 0) = 0
-                AND COALESCE(hidden_by_admin::integer, 0) = 0
+                AND admin_hidden = FALSE
+                AND hidden_by_admin IS NULL
 
             RETURNING
                 id,
@@ -136,14 +142,20 @@ async function restoreProperty(req, res) {
                 admin_hidden,
                 hidden_by_admin
             `,
-            [propertyId, req.user.id]
+            [
+                propertyId,
+                req.user.id
+            ]
         );
 
-        if (result.rows.length === 0) {
+        if (!result.rows.length) {
+
             return res.status(403).json({
                 success: false,
-                message: "Ce bien ne peut pas être réactivé."
+                message:
+                    "Ce bien ne peut pas être réactivé par le propriétaire. Vérifiez qu'il vous appartient et qu'il n'a pas été masqué par l'administration."
             });
+
         }
 
         return res.json({
@@ -154,13 +166,18 @@ async function restoreProperty(req, res) {
 
     } catch (error) {
 
-        console.error("RESTORE PROPERTY ERROR:", error);
+        console.error(
+            "RESTORE PROPERTY ERROR:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
             message: "Erreur lors de la réactivation du bien."
         });
+
     }
+
 }
 
 
