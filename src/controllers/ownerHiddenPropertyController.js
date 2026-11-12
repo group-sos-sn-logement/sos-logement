@@ -88,8 +88,9 @@ async function getHiddenProperties(req, res) {
 }
 
 
+
 /* =====================================================
-   RÉACTIVER
+   RÉACTIVER UN BIEN MASQUÉ PAR SON PROPRIÉTAIRE
 ===================================================== */
 
 async function restoreProperty(req, res) {
@@ -98,9 +99,10 @@ async function restoreProperty(req, res) {
 
         const propertyId = Number(req.params.id);
 
-        if (!propertyId) {
+        if (!Number.isInteger(propertyId) || propertyId <= 0) {
 
             return res.status(400).json({
+                success: false,
                 message: "ID du bien invalide."
             });
 
@@ -112,11 +114,15 @@ async function restoreProperty(req, res) {
 
             SET
                 status = COALESCE(
-                    status_before_hidden,
+                    NULLIF(status_before_hidden, ''),
                     'pending'
                 ),
 
                 owner_hidden = FALSE,
+
+                status_before_hidden = NULL,
+
+                hidden_at = NULL,
 
                 updated_at = CURRENT_TIMESTAMP
 
@@ -125,14 +131,16 @@ async function restoreProperty(req, res) {
                 AND owner_id = $2
                 AND status = 'hidden'
                 AND owner_hidden = TRUE
-                AND admin_hidden = FALSE
+                AND COALESCE(admin_hidden, FALSE) = FALSE
+                AND COALESCE(hidden_by_admin, FALSE) = FALSE
 
             RETURNING
                 id,
                 property_code,
                 status,
                 owner_hidden,
-                admin_hidden
+                admin_hidden,
+                hidden_by_admin
             `,
             [
                 propertyId,
@@ -145,14 +153,14 @@ async function restoreProperty(req, res) {
             return res.status(403).json({
                 success: false,
                 message:
-                    "Ce bien ne peut pas être réactivé par le propriétaire. S'il a été masqué par l'administrateur, seul l'administrateur peut le réactiver."
+                    "Ce bien n'existe pas, ne vous appartient pas ou a été masqué par l'administration."
             });
 
         }
 
         return res.json({
             success: true,
-            message: "Le bien a été réactivé et envoyé pour validation.",
+            message: "Votre logement a été réactivé avec succès.",
             property: result.rows[0]
         });
 
@@ -170,6 +178,7 @@ async function restoreProperty(req, res) {
 
     }
 }
+
 
 
 /* =====================================================
